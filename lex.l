@@ -67,5 +67,21 @@ number	{digits}{opFraction}{opExponent}
 <IN_SINGLELINE_COMMENT>.	;
 
 
+program			return PROGRAM;
+var				return VAR;
+begin 			return BEGIN;
+end 			return END;
+function		return FUNCTION;
+procedure		return PROCEDURE;
+and				return AND;
+array			return ARRAY;
+const 			return CONST;
+if				return IF;
+then 			return THEN;
+else			return ELSE:
+for				return FOR;
+to				return TO;
+do				return DO;
+
 
 
