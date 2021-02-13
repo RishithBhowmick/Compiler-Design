@@ -81,7 +81,13 @@ then 			return THEN;
 else			return ELSE:
 for				return FOR;
 to				return TO;
+downto			return DOWNTO;
 do				return DO;
+read			;
+readln			;
+write			return WRITE;
+writeln			return WRITELN;
+[\t|' ']+		;
 
 
 
