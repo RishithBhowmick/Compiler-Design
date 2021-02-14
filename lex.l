@@ -67,27 +67,24 @@ number	{digits}{opFraction}{opExponent}
 <IN_SINGLELINE_COMMENT>.	;
 
 
-program			return PROGRAM;
-var				return VAR;
-begin 			return BEGIN;
-end 			return END;
-function		return FUNCTION;
-procedure		return PROCEDURE;
-and				return AND;
-array			return ARRAY;
-const 			return CONST;
-if				return IF;
-then 			return THEN;
-else			return ELSE:
-for				return FOR;
-to				return TO;
-downto			return DOWNTO;
-do				return DO;
+program			return T_PROGRAM;
+var				return T_VAR;
+begin 			return T_BEGIN;
+end 			return T_END;
+function		return T_FUNCTION;
+procedure		return T_PROCEDURE;
+and				return T_AND;
+array			return T_ARRAY;
+const 			return T_CONST;
+if				return T_IF;
+then 			return T_THEN;
+else			return T_ELSE:
+for				return T_FOR;
+to				return T_TO;
+downto			return T_DOWNTO;
+do				return T_DO;
 read			;
 readln			;
-write			return WRITE;
-writeln			return WRITELN;
+write			return T_WRITE;
+writeln			return T_WRITELN;
 [\t|' ']+		;
-
-
-
