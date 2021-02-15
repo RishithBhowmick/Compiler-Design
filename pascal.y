@@ -84,4 +84,127 @@ const_block :
         ;
 
 const_definition :
-        T_IDENTIFIER T_S
+        T_IDENTIFIER "=" constant
+        ;
+constant :
+        "integer"
+        | "boolean"
+        | "string"
+        ;
+
+type_block :
+        T_TYPE onlyNewLine type_definition
+        |
+        ;
+type_definition :
+        T_IDENTIFIER = type
+        ;
+
+type :
+        "character"
+        | "integer"
+        | "real"
+        | "boolean"
+        | "string"
+        ;
+
+variable_block :
+        T_VAR onlyNewLine decl_stmts
+        |
+        ;
+
+decl_stmts :
+        decl_stmt onlyNewLine decl_stmts
+        | decl_stmt
+        ;
+
+decl_stmt :
+        T_IDENTIFIER ":" T_TYPE ";"
+        ;
+
+main_program_block :
+        T_BEGIN onlyNewLine main_body onlyNewLine T_END "."
+        ;
+
+main_body :
+        assignment_statements onlyNewLine main_body
+        | if_statement onlyNewLine main_body
+        | fordo_statement onlyNewLine main_body
+        | print_statements onlyNewLine main_body
+        |
+        ;
+
+assignment_statements :
+        T_IDENTIFIER assignment_operators expression
+        ;
+
+expression :
+        T_IDENTIFIER
+        | value
+        | "(" expression ")"
+        | expression operator expression
+        ;
+
+operator :
+        arithemtic_operators
+        | relational_operators
+        | boolean_operators
+        | bitwise_operators
+        ;
+
+assignment_operators :
+        T_ASOP
+        | T_AS_PE
+        | T_AS_SE
+        | T_AS_MULE
+        | T_AS_DIVE
+        ;
+
+arithemtic_operators :
+        '+'
+        | '-'
+        | '*'
+        | '/'
+        | '%'
+        ;
+
+relational_operators :
+        T_SINGLEEQ
+        | '>'
+        | '<'
+        | T_GE
+        | T_LE
+        | T_NE
+        ;
+
+boolean_operators :
+        T_BOOL_AND
+        | T_BOOL_OR
+        | T_BOOL_NOT
+        ;
+
+bitwise_operators :
+        '|'
+        | '&'
+        | '!'
+        | '~'
+        | T_BIT_LEFT_SHIFT
+        | T_BIT_RIGHT_SHIFT
+        ;
+
+if_statement :
+        T_IF condition_statement T_THEN onlyNewLine main_body
+        | T_IF condition_statement T_THEN onlyNewLine main_body T_ELSE onlyNewLine main_body
+        ;
+
+fordo_statement :
+        T_FOR T_IDENTIFIER T_ASOP value to_or_downto value T_DO newLineMaybe for_body
+        ;
+
+to_or_downto :
+        T_TO
+        | T_DOWNTO
+        ;
+
+for_body :
+        
