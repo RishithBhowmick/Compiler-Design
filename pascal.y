@@ -50,71 +50,72 @@
 // end. _main_program_ends_
 
 Program :
-        ProgramHeading Block
+        ProgramHeading block
         ;
 
 ProgramHeading :
-        T_PROGRAM T_IDENTIFIER ';' newLineMaybe
-        ;
-
-newLineMaybe   :
-        '\n'
-        |
+        T_PROGRAM T_IDENTIFIER ';'
         ;
 
 // just | followed by ; is for lambda
 
-Block   :
-        uses_block const_block type_block variable_block main_program_block
+block   :
+        uses_block const_block type_block variable_block execution_block "."
         ;
 
 uses_block :
-        T_USES T_IDENTIFIER other_libs ';' newLineMaybe
+        T_USES T_IDENTIFIER other_libs ';'
         |
         ;
 
 other_libs :
-        ',' other_libs 
+        ',' T_IDENTIFIER other_libs 
         |
         ;
 
 const_block :
-        T_CONST onlyNewLine const_definition
+        T_CONST const_definition
         |
         ;
 
 const_definition :
-        T_IDENTIFIER "=" constant
+        T_IDENTIFIER T_SINGLEEQ constant ';' more_const_definition
         ;
+
 constant :
-        "integer"
-        | "boolean"
-        | "string"
+        T_INTVAL
+        | T_BOOLVAL
+        | T_FLOATVAL
+        ;
+
+more_const_definition :
+        T_IDENTIFIER T_SINGLEEQ constant ';' more_const_definition
+        |
         ;
 
 type_block :
-        T_TYPE onlyNewLine type_definition
+        T_TYPE type_definition
         |
         ;
+
 type_definition :
-        T_IDENTIFIER = type
+        T_IDENTIFIER more_type_identifiers T_SINGLEEQ T_DATATYPE ';' type_definition
+        |
         ;
 
-type :
-        "character"
-        | "integer"
-        | "real"
-        | "boolean"
-        | "string"
+more_type_identifiers :
+        ',' T_IDENTIFIER more_type_identifiers
+        |
         ;
 
 variable_block :
-        T_VAR onlyNewLine decl_stmts
+        T_VAR decl_stmts
         |
         ;
 
+// here symbol table stuff will come
 decl_stmts :
-        decl_stmt onlyNewLine decl_stmts
+        decl_stmt decl_stmts
         | decl_stmt
         ;
 
@@ -122,15 +123,15 @@ decl_stmt :
         T_IDENTIFIER ":" T_TYPE ";"
         ;
 
-main_program_block :
-        T_BEGIN onlyNewLine main_body onlyNewLine T_END "."
+execution_block :
+        T_BEGIN execution_body T_END
         ;
 
-main_body :
-        assignment_statements onlyNewLine main_body
-        | if_statement onlyNewLine main_body
-        | fordo_statement onlyNewLine main_body
-        | print_statements onlyNewLine main_body
+execution_body :
+        assignment_statements execution_body
+        | if_statement execution_body
+        | fordo_statement execution_body
+        | print_statements execution_body
         |
         ;
 
@@ -143,6 +144,13 @@ expression :
         | value
         | "(" expression ")"
         | expression operator expression
+        ;
+
+value :
+        T_INTVAL
+        | T_FLOATVAL
+        | T_BOOLVAL
+        | T_STRINGVAL
         ;
 
 operator :
@@ -193,12 +201,12 @@ bitwise_operators :
         ;
 
 if_statement :
-        T_IF condition_statement T_THEN onlyNewLine main_body
-        | T_IF condition_statement T_THEN onlyNewLine main_body T_ELSE onlyNewLine main_body
+        T_IF condition_statement T_THEN execution_body
+        | T_IF condition_statement T_THEN execution_body T_ELSE execution_body
         ;
 
 fordo_statement :
-        T_FOR T_IDENTIFIER T_ASOP value to_or_downto value T_DO newLineMaybe for_body
+        T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression T_DO execution_body
         ;
 
 to_or_downto :
@@ -206,5 +214,17 @@ to_or_downto :
         | T_DOWNTO
         ;
 
-for_body :
-        
+%%
+int yyparse() {
+        yylex();
+}
+int yyerror() {
+        printf("Invalid Syntax: %d: %d\n", yylloc.first_line, yylloc.first_column);
+        printf("Compilation failed.\n");
+        successful = 0;
+        return 0;
+}
+
+int main() {
+        yyparse();
+}
