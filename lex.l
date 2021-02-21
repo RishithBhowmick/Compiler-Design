@@ -27,13 +27,14 @@ single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
 multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
 paranthesis	\(|\)|\[|\]
-punctuation ;|,|:|\.
-indextype [0-9]\.\.\.[0-9]+
-floatval number
+floatval {digits}(\.{digits})
 intval digits
 boolval true|false
 stringval \".*\"|'.*'
 datatypes integer|character|real|boolean|string
+punctuation ;|,|:|\.
+indextype [0-9]\.\.\.[0-9]+
+
 
 %%
 
@@ -186,7 +187,6 @@ writeln			{ECHO; return T_WRITELN;}
 
 {punctuation} {
 	ECHO;
-	printf("%c", yytext[0]);
 	return yytext[0];
 }
 
