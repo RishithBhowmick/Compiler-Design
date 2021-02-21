@@ -140,38 +140,14 @@
 			result = a%b;
 
 		}
-		if(strcmp(operator, "|") == 0)
-		{
-			result = a|b;
-		}
-		if(strcmp(operator, "&") == 0)
-		{
-			result = a&b;
-		}
-		if(strcmp(operator, "^") == 0)
-		{
-			result = a^b;
-		}
-		if(strcmp(operator, ">") == 0)
-		{
-			result = a>b;
-		}
-		if(strcmp(operator, "<") == 0)
-		{
-			result = a<b;
-		}
-		if(strcmp(operator, "|") == 0)
-		{
-			result = a|b;
-		}
 		return result;
 	}
-
-
         
 %}
+
 %token T_PROGRAM;
-%token T_IDENTIFIER;
+%token <str> T_IDENTIFIER;
+%token T_USES;
 %token T_TYPE;
 %token T_VAR;
 %token T_BEGIN;
@@ -180,6 +156,7 @@
 %token T_PROCEDURE;
 %token T_AND;
 %token T_ARRAY;
+%token T_OF;
 %token T_CONST;
 %token T_IF;
 %token T_THEN;
@@ -190,25 +167,35 @@
 %token T_DO;
 %token T_WRITE;
 %token T_WRITELN;
+
+%token T_INDEXTYPE;
+
 %token T_SINGLEEQ;
-%token T_INTVAL;
-%token T_BOOLVAL;
-%token T_FLOATVAL;
-%token T_STRINGVAL;
-%token T_DATATYPE;
+
+%token <intval> T_INTVAL;
+%token <intval> T_BOOLVAL;
+%token <floatval> T_FLOATVAL;
+%token <str> T_STRINGVAL;
+%token <type> T_DATATYPE;
+
 %token T_ASOP;
 %token T_AS_PE;
 %token T_AS_SE;
 %token T_AS_MULE;
 %token T_AS_DIVE;
+
 %token T_GE;
 %token T_LE;
 %token T_NE;
+
 %token T_BOOL_AND;
 %token T_BOOL_OR;
 %token T_BOOL_NOT;
 %token T_BIT_LEFT_SHIFT;
 %token T_BIT_RIGHT_SHIFT;
+
+%left '+' '-'
+%left '*' '/'
 %%
 
 // Pascal Program structure
@@ -220,18 +207,23 @@
 // code 
 // end. _main_program_ends_
 
-Program :
-        ProgramHeading block
+
+startProg :
+		program
+		;
+
+program :
+        programHeading block '.'
         ;
 
-ProgramHeading :
+programHeading :
         T_PROGRAM T_IDENTIFIER ';'
         ;
 
 // just | followed by ; is for lambda
 
 block   :
-        uses_block const_block type_block variable_block execution_block "."
+        uses_block const_block type_block variable_block function_and_procedure_block execution_block
         ;
 
 uses_block :
@@ -331,12 +323,12 @@ decl_stmts :
             var_name_stack_top++;
 			var_name_stack[var_name_stack_top] = strdup(yylval.str);
         }
-        more_decl_stmt ":" data_type ";"
+        more_decl_stmt ':' data_type ';'
         |
         ;
 
 more_decl_stmt :
-        "," T_IDENTIFIER
+        ',' T_IDENTIFIER
         {
             type_identifier_top++;
 			type_identifier_stack[type_identifier_top] = strdup(yylval.str);
@@ -387,7 +379,86 @@ data_type :
 		}
         ;  
                
+function_and_procedure_block:
+		function_block function_and_procedure_block 
+		| procedure_block function_and_procedure_block 
+		| 
+		;
 
+procedure_block:
+		T_PROCEDURE T_IDENTIFIER
+		{
+			curr_scope_level = strdup(yylval.str);
+			printf("Entering the Procedure %s\n", curr_scope_level);
+		}
+		';'  block ';'
+		| T_PROCEDURE T_IDENTIFIER 
+		{
+			curr_scope_level = strdup(yylval.str);
+			printf("Entering the Procedure %s\n", curr_scope_level);
+		}
+		'(' param_list ')' ';'  block ';'
+		;
+
+param_list:
+		T_IDENTIFIER ':' T_DATATYPE 
+		| T_IDENTIFIER ':' T_DATATYPE ';' param_list
+		| 
+		;
+
+function_block:
+		T_FUNCTION T_IDENTIFIER
+		{
+			curr_scope_level = strdup(yylval.str);
+			printf("Entering the Function %s\n", curr_scope_level);
+		}
+		':' T_DATATYPE ';'  block ';' 
+		{
+			strcpy(curr_scope_level,"global");
+
+		}
+		| T_FUNCTION T_IDENTIFIER 
+		{
+			curr_scope_level = strdup(yylval.str);
+		}
+		'(' function_param_list ')' ':' T_DATATYPE ';'  block ';' 
+		{
+			char s[10] = "global";
+			curr_scope_level = strdup(s);
+		}
+		;
+
+function_param_list:
+		T_IDENTIFIER 
+		{
+			var_name_stack_top++;
+			var_name_stack[var_name_stack_top] = strdup(yylval.str);
+		}
+		more_func_identifiers ':' T_DATATYPE 
+		{
+		int result = dump_stack_in_symbol_table(yylval.type, yylloc.first_line, yylloc.first_column);
+		if(!result){
+				yyerror("Abort: Variable already declared.");
+				exit(1);
+			}
+		}
+		function_param_continue
+		;
+
+function_param_continue :
+		';' function_param_list
+		|
+		;
+
+more_func_identifiers:
+		',' T_IDENTIFIER
+		{
+			var_name_stack_top++;
+			var_name_stack[var_name_stack_top] = strdup(yylval.str);
+		}
+		more_func_identifiers 
+		| 
+		;
 
 execution_block :
         T_BEGIN execution_body T_END
@@ -400,23 +471,26 @@ execution_body :
         | print_statements execution_body
         |
         ;
+	
+print_statements:
+		T_WRITELN '(' T_STRINGVAL ')' ';'
+;
 
 assignment_statements :
         T_IDENTIFIER 
         {
-                //printf("Variable Being Checked : %s ",yylval.str);
-		if(!check_valid_identifier(yylval.str)){
-			char error[1000];
-			//printf("Scope Level : %s ",curr_scope_level);
-			sprintf(error,"Abort: Variable %s is not declared.",yylval.str);
-			yyerror(error);
-			exit(1);
-		}
-		else
-		{
-			assignment_name_stack_top++;
-			assignment_name_stack[assignment_name_stack_top] = strdup(yylval.str);
-		}
+			if(!check_valid_identifier(yylval.str)){
+				char error[1000];
+				//printf("Scope Level : %s ",curr_scope_level);
+				sprintf(error,"Abort: Variable %s is not declared.",yylval.str);
+				yyerror(error);
+				exit(1);
+			}
+			else
+			{
+				assignment_name_stack_top++;
+				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.str);
+			}
         }
         assignment_operators expression
         ;
@@ -430,7 +504,7 @@ expression :
 			}
         }
         | value
-        | "(" expression ")"
+        | '(' expression ')'
         | expression operator expression
         {
                 // not sure what this is so I left      
@@ -566,11 +640,11 @@ assignment_operators :
         ;
 
 arithemtic_operators :
-        '+'
-        | '-'
-        | '*'
-        | '/'
-        | '%'
+        '+' {strcpy($<str>$,"+");}
+        | '-' {strcpy($<str>$,"-");}
+        | '*' {strcpy($<str>$,"*");}
+        | '/' {strcpy($<str>$,"/");}
+        | '%' {strcpy($<str>$,"%");}
         ;
 
 relational_operators :
@@ -598,9 +672,22 @@ bitwise_operators :
         ;
 
 if_statement :
-        T_IF '(' boolean_statement ')' T_THEN execution_body
-        | T_IF '(' boolean_statement ')' T_THEN execution_body T_ELSE execution_body
+        T_IF '(' boolean_expression ')' T_THEN execution_body if_then_follow
         ;
+
+if_then_follow :
+		else_if_block
+		| else_block
+		|
+		;
+	
+else_if_block :
+		T_ELSE if_statement
+		;
+
+else_block :
+		T_ELSE execution_body;
+		;
 
 fordo_statement :
         T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression T_DO execution_body
@@ -652,16 +739,84 @@ expression :
 		}
 		;
 %%
-int yyparse() {
-        yylex();
-}
-int yyerror() {
-        printf("Invalid Syntax: %d: %d\n", yylloc.first_line, yylloc.first_column);
-        printf("Compilation failed.\n");
-        successful = 0;
-        return 0;
+int yyerror(const char *message) {
+	printf("\n\nInvalid Syntax:%d:%d Reason being %s\n",yylloc.first_line,yylloc.first_column,message);
+	printf("Compilation Failed\n");
+	successful=0;
+	return 0;
 }
 
-int main() {
-        yyparse();
+int main(int argc,char* argv[]) {
+	struct timespec start;
+	struct timespec end;
+
+	if (argc>1) {
+		yyin = fopen(argv[1],"r");
+		if(yyin == NULL) {
+			perror("Error ");
+			exit(1);
+		}
+	}
+	else {
+		yyin = stdin;
+	}
+
+	char extension[8] = ".output";
+	char outputfile[40] = "output/";
+
+	/*To Create Output File*/
+	char *ptr = strtok(argv[1], "/");
+	char *inputfile; 
+	while(ptr != NULL)
+	{
+		inputfile = strdup(ptr);
+		ptr = strtok(NULL, "/");
+	}
+
+	strcat(outputfile,inputfile);
+	strcat(outputfile,extension);
+
+	yyout = (FILE*)fopen(outputfile,"w+");
+	/*End Create Output File*/
+
+	clock_gettime(CLOCK_REALTIME, &start);
+	yyparse();
+	clock_gettime(CLOCK_REALTIME, &end);
+	if(successful){
+		printf("\n\nCompiled Successfully\n");
+		printf("Took : %lf seconds\n", time_elapsed(&start, &end));
+
+		printf("\n\nSymbol Table Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
+
+		struct symbol_table *s;
+		int i=0;
+	    for(s=SYMBOL_TABLE,i=0; s != NULL,i<HASH_COUNT(SYMBOL_TABLE); s=s->hh.next,i++) {
+
+	    	if(strcmp(s->type,"string")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+				else if(strcmp(s->type,"integer")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else if(strcmp(s->type,"real")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
+				}
+				else if(strcmp(s->type,"boolean")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else {
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+
+	    }
+
+	}
+
+}
+
+double time_elapsed(struct timespec *start, struct timespec *end) {
+	double t;
+	t = (end->tv_sec - start->tv_sec); // diff in seconds
+	t += (end->tv_nsec - start->tv_nsec) * 0.000000001; //diff in nanoseconds
+	return t;
 }

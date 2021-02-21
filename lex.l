@@ -1,47 +1,19 @@
 %{
-#include<stdio.h>
-void yyerror(char *s);
-//#include "y.tab.h" token declarations from yacc file
-int linenumber=0;
+	#include<stdio.h>
+	#include<string.h>
+	void yyerror(char *s);
+	//#include "y.tab.h" token declarations from yacc file
+	#include "yy.tab.h"
+	#include "uthash/src/uthash.h"
+	int yycolumn;
+	#define YY_USER_ACTION yyloc.first_line = yyloc.last_line = yylineno;\
+	yyloc.first_column = yycolumn; yyloc.last_column = yycolumn + yyleng - 1;\
+	yycolumn += yyleng;
 %}
+%option yylineno
 
 %x IN_MULTILINE_COMMENT
 %x IN_SINGLELINE_COMMENT
-
-/*
-A [aA]
-B [bB]
-C [cC]
-D [dD]
-E [eE]
-F [fF]
-G [gG]
-H [hH]
-I [iI]
-J [jJ]
-K [kK]
-L [lL]
-M [mM]
-N [nN]
-O [oO]
-P [pP]
-Q [qQ]
-R [rR]
-S [sS]
-T [tT]
-U [uU]
-V [vV]
-W [wW]
-X [xX]
-Y [yY]
-Z [zZ]
-int	return INT;
-float	return FLOAT;
-{id}	return ID;
-{number}	return NUM;
-[\n|\t|' ']	;
-.	return *yytext;
- */
 
 digit	[0-9]
 letter	[a-zA-Z]
@@ -58,8 +30,15 @@ number	{digits}{opFraction}{opExponent}
 // type block is used for classes (need to use class keyword for this) or enumerated types
 single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
-multiple_char_op	and|or|not|div|mod|and\ then|or\ else|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=|\%=
-paranthesis	\(|\)
+multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
+paranthesis	\(|\)|\[|\]
+punctuaton ;|,|:|.
+indextype [0-9]\.\.\.[0-9]+
+intval digits
+floatval number
+boolval true|false
+stringval \".*\"
+datatypes integer|character|real|boolean|string
 
 %%
 
@@ -87,9 +66,30 @@ end 			return T_END;
 function		return T_FUNCTION;
 procedure		return T_PROCEDURE;
 
+{indextype}		return T_INDEXTYPE;
+{intval}		{
+	yylval.intval = atoi(yytext);
+	ECHO;
+	return T_INTVAL;
+}
+{floatval} 		{
+	yylval.floatlval = atoi(yytext);
+	ECHO;
+	return T_FLOATVAL;
+}
+{boolval} 		{
+	if(strcmp(yytext, "true")==0) 
+		yylval.intval = 1;
+	else
+		yylval.intval = 0;
+	ECHO;
+	return T_BOOLVAL;
+}
+
 and				return T_AND;
 or				return T_OR;
 array			return T_ARRAY;
+of 				return T_OF;
 const 			return T_CONST;
 if				return T_IF;
 then 			return T_THEN;
@@ -104,6 +104,12 @@ write			return T_WRITE;
 writeln			return T_WRITELN;
 [\t|' ']+		;
 
+{datatypes} 	{
+	yyval.type = strdup(yytext);
+	ECHO;
+	return T_DATATYPE;
+}
+
 {id} {
 	if(yyleng > 31) {
 		printf("Warning : Identifier Length Greater than 31 characters, Truncating Identifier.\n");
@@ -112,5 +118,75 @@ writeln			return T_WRITELN;
 	strncpy(temp,yytext,31);
 	yylval.str = strdup(temp);
 	ECHO;
- return T_IDENTIFIER;
+	return T_IDENTIFIER;
+}
+
+{single_char_op}   {
+	return yytext[0];
+}
+
+{single_eq}   {
+	return T_SINGLEEQ;
+}
+
+{multiple_char_op}  {
+	if(strcmp(yytext, "and") == 0) {
+		return T_BOOL_AND;
+	}
+	else if(strcmp(yytext, "or") == 0) {
+		return T_BOOL_OR;
+	}
+	else if(strcmp(yytext, "not") == 0) {
+		return T_BOOL_NOT;
+	}
+	else if(strcmp(yytext, "<=") == 0) {
+		return T_LE;
+	}
+	else if(strcmp(yytext, ">=") == 0) {
+		return T_GE;
+	}
+	else if(strcmp(yytext, "<>") == 0) {
+		return T_NE;
+	}
+	else if(strcmp(yytext, "<<") == 0) {
+		return T_BIT_LEFT_SHIFT;
+	}
+	else if(strcmp(yytext, ">>") == 0) {
+		return T_BIT_RIGHT_SHIFT;
+	}
+	else if(strcmp(yytext, ":=") == 0) {
+		return T_ASOP;
+	}
+	else if(strcmp(yytext, "+=") == 0) {
+		return T_AS_PE;
+	}
+	else if(strcmp(yytext, "-=") == 0) {
+		return T_AS_SE;
+	}
+	else if(strcmp(yytext, "*=") == 0) {
+		return T_AS_MULE;
+	}
+	else if(strcmp(yytext, "/=") == 0) {
+		return T_AS_DIVE;
+	}
+}
+
+{paranthesis} {
+	return yytext[0];
+}
+
+{punctuaton} {
+	return yytext[0];
+}
+
+"\n" {
+	yycolumn = 1;
+}
+
+. {}
+
+%%
+
+int yywrap() {
+	return 1;
 }
