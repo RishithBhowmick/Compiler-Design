@@ -22,7 +22,7 @@
 	
 	char *curr_scope_level = "global";
 
-	struct variable_type_info var_type_information;
+	// struct variable_type_info var_type_information;
 	
 	struct symbol_table *SYMBOL_TABLE = NULL; /*Generic Symbol Table*/
 	// We are using a hash table as the data structure for the symbol table
