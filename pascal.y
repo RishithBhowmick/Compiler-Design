@@ -1,12 +1,13 @@
 %{
     #include<stdio.h>
     #include<stdlib.h>
+    #include<time.h>
     #include "uthash/src/uthash.h"
     #include "sym_tab.h" 
     #define YYPARSE_PARAM scanner
     #define YYLEX_PARAM   scanner
     int yylex();
-    void yyerror(char *s);
+    int yyerror();
     int successful=1;
 
     extern FILE *yyin;
@@ -162,7 +163,6 @@
 %token T_END;
 %token T_FUNCTION;
 %token T_PROCEDURE;
-%token T_AND;
 %token T_ARRAY;
 %token T_OF;
 %token T_CONST;
@@ -295,7 +295,7 @@ type_definition :
 				{
 					s = malloc(sizeof(struct type_table));
 					strcpy(s->user_defined_name, type_identifier_stack[i]);
-					strcpy(s->actual_type_name, yylval.type);
+					strcpy(s->actual_type_name, yylval.s.type);
 					HASH_ADD_STR(TYPE_TABLE, user_defined_name, s);  /* var_name: name of key field */
 				}
 				else
@@ -516,7 +516,7 @@ expression :
         {
                 // not sure what this is so I left      
             printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
-			$<intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
+			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			struct symbol_table *s = NULL;
 			char var_mang_name[31];
@@ -549,8 +549,8 @@ simpleExpression :
 		| simpleExpression '!' term
 		{
                 // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
-			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
+            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			struct symbol_table *s = NULL;
 			char var_mang_name[31];
@@ -584,7 +584,7 @@ term :
 		{
                 // not sure what this is so I left      
             printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
-			$<intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
+			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			struct symbol_table *s = NULL;
 			char var_mang_name[31];
@@ -616,9 +616,9 @@ factor :
 		| value
 		| T_IDENTIFIER
 		{
-			if(check_valid_identifier(yyval.str)) {
+			if(check_valid_identifier(yyval.s.str)) {
 				union data variable_value = get_identifier_data(yylval.s.str);
-				$<intval>$ = variable_value.int_value;
+				$<s.intval>$ = variable_value.int_value;
 			}
         }
 
@@ -641,7 +641,7 @@ value :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.int_value = yylval.intval;
+				temp->var_value.int_value = yylval.s.intval;
 				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
 			}
         }
@@ -663,7 +663,7 @@ value :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.float_value = yylval.floatval;
+				temp->var_value.float_value = yylval.s.floatval;
 				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
 			}
         }
@@ -685,7 +685,7 @@ value :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.int_value = yylval.intval;
+				temp->var_value.int_value = yylval.s.intval;
 				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
 			}
         }

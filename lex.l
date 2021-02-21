@@ -82,8 +82,6 @@ procedure		return T_PROCEDURE;
 	return T_BOOLVAL;
 }
 
-and				return T_AND;
-or				return T_OR;
 array			return T_ARRAY;
 of 				return T_OF;
 const 			return T_CONST;
@@ -112,7 +110,7 @@ writeln			return T_WRITELN;
 	}
 	char temp[32];
 	strncpy(temp,yytext,31);
-	yylval.str = strdup(temp);
+	yylval.s.str = strdup(temp);
 	ECHO;
 	return T_IDENTIFIER;
 }
