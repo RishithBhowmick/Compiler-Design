@@ -194,6 +194,7 @@
 %token T_BIT_LEFT_SHIFT;
 %token T_BIT_RIGHT_SHIFT;
 
+%right T_ASOP
 %left '+' '-'
 %left '*' '/'
 %%
@@ -336,6 +337,7 @@ more_decl_stmt :
         more_decl_stmt
         |
         ;
+
 data_type :
         T_TYPE
         {
@@ -465,10 +467,10 @@ execution_block :
         ;
 
 execution_body :
-        assignment_statements execution_body
-        | if_statement execution_body
-        | fordo_statement execution_body
-        | print_statements execution_body
+        execution_body assignment_statements 
+        | execution_body if_statement
+        | execution_body fordo_statement
+        | execution_body print_statements
         |
         ;
 	
@@ -496,16 +498,13 @@ assignment_statements :
         ;
 
 expression :
-        T_IDENTIFIER
-        {
-			if(check_valid_identifier(yyval.str)) {
-				union data variable_value = get_identifier_data(yylval.str);
-				$<intval>$ = variable_value.int_value;
-			}
-        }
-        | value
-        | '(' expression ')'
-        | expression operator expression
+        simpleExpression
+        | simpleExpression T_SINGLEEQ simpleExpression
+		| simpleExpression T_NE simpleExpression
+		| simpleExpression '<' simpleExpression
+		| simpleExpression T_LE simpleExpression
+		| simpleExpression '>' simpleExpression
+		| simpleExpression T_GE simpleExpression
         {
                 // not sure what this is so I left      
             printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
@@ -532,6 +531,88 @@ expression :
 			}
         }
         ;
+
+simpleExpression :
+		term
+		| simpleExpression '+' term
+		| simpleExpression '-' term
+		| simpleExpression T_BOOL_OR term
+		| simpleExpression '|' term
+		| simpleExpression '!' term
+		{
+                // not sure what this is so I left      
+            printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
+			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
+			
+			struct symbol_table *s = NULL;
+			char var_mang_name[31];
+			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+			strcat(var_mang_name, "$");
+			strcat(var_mang_name, curr_scope_level);
+			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+			if(s)
+			{
+				struct symbol_table *temp = NULL;
+				struct symbol_table *r = NULL;
+				temp = malloc(sizeof(struct symbol_table));
+				strcat(temp->var_name, var_mang_name);
+				strcpy(temp->type, s->type);
+				temp->scope_level = s->scope_level;
+				temp->line_no = s->line_no;
+				temp->col_no = s->col_no;
+				temp->var_value.int_value = $<intval>$;
+				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+			}
+        }
+		;
+
+term :
+		factor 
+		| term '*' factor
+		| term '/' factor
+		| term '%' factor
+		| term T_BOOL_AND factor
+		| term '&' factor
+		{
+                // not sure what this is so I left      
+            printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
+			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
+			
+			struct symbol_table *s = NULL;
+			char var_mang_name[31];
+			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+			strcat(var_mang_name, "$");
+			strcat(var_mang_name, curr_scope_level);
+			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+			if(s)
+			{
+				struct symbol_table *temp = NULL;
+				struct symbol_table *r = NULL;
+				temp = malloc(sizeof(struct symbol_table));
+				strcat(temp->var_name, var_mang_name);
+				strcpy(temp->type, s->type);
+				temp->scope_level = s->scope_level;
+				temp->line_no = s->line_no;
+				temp->col_no = s->col_no;
+				temp->var_value.int_value = $<intval>$;
+				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+			}
+        }
+		;
+
+factor :
+		'(' expression ')'
+		| '+' factor
+		| '-' factor
+		| T_BOOL_NOT factor
+		| value
+		| T_IDENTIFIER
+		{
+			if(check_valid_identifier(yyval.str)) {
+				union data variable_value = get_identifier_data(yylval.str);
+				$<intval>$ = variable_value.int_value;
+			}
+        }
 
 value :
         T_INTVAL
@@ -624,27 +705,12 @@ value :
         }
         ;
 
-operator :
-        arithemtic_operators
-        | relational_operators
-        | boolean_operators
-        | bitwise_operators
-        ;
-
 assignment_operators :
         T_ASOP
         | T_AS_PE
         | T_AS_SE
         | T_AS_MULE
         | T_AS_DIVE
-        ;
-
-arithemtic_operators :
-        '+' {strcpy($<str>$,"+");}
-        | '-' {strcpy($<str>$,"-");}
-        | '*' {strcpy($<str>$,"*");}
-        | '/' {strcpy($<str>$,"/");}
-        | '%' {strcpy($<str>$,"%");}
         ;
 
 relational_operators :
@@ -654,22 +720,6 @@ relational_operators :
         | T_GE
         | T_LE
         | T_NE
-        ;
-
-boolean_operators :
-        T_BOOL_AND
-        | T_BOOL_OR
-        | T_BOOL_NOT
-        ;
-
-bitwise_operators :
-        '|'
-        | '&'
-        | '!'
-        | '~'
-        | T_BIT_LEFT_SHIFT
-        | T_BIT_RIGHT_SHIFT
-        ;
 
 if_statement :
         T_IF '(' boolean_expression ')' T_THEN execution_body if_then_follow
@@ -702,42 +752,6 @@ boolean_expression :
 		expression relational_operators expression
 ;
 
-expression :
-		T_IDENTIFIER
-		{
-			if(check_valid_identifier(yyval.str)){
-				union data variable_value = get_identifier_data(yylval.str);
-				$<intval>$ = variable_value.int_value;
-			}
-		} 
-		| value 
-		| '(' expression ')' 
-		| expression operator expression 
-		{
-			printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
-			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
-			
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
-			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<intval>$;
-				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
-			}
-		}
-		;
 %%
 int yyerror(const char *message) {
 	printf("\n\nInvalid Syntax:%d:%d Reason being %s\n",yylloc.first_line,yylloc.first_column,message);
