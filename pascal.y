@@ -1,8 +1,8 @@
 %{
     #include<stdio.h>
     #include<stdlib.h>
-    #include "../uthash/src/uthash.h"
-    #include "symbol_table.h" 
+    #include "uthash/src/uthash.h"
+    #include "sym_tab.h" 
     #define YYPARSE_PARAM scanner
     #define YYLEX_PARAM   scanner
     int yylex();
@@ -13,11 +13,6 @@
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
     
-    union data {    // since value is not of a single type. Union is the best structure. SO COOOOL
-		int int_value;
-		float float_value;
-		char string_value[256];
-    };
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
 
@@ -144,6 +139,19 @@
 	}
         
 %}
+%locations 
+
+%union {
+	struct parse_node
+	{
+		
+		char *str;
+		char *type;
+		int intval;
+		float floatval;
+		// struct ast_node * ast;
+	}s;
+}
 
 %token T_PROGRAM;
 %token <str> T_IDENTIFIER;
@@ -275,7 +283,7 @@ type_definition :
         T_IDENTIFIER 
         {
             type_identifier_top++;
-			type_identifier_stack[type_identifier_top] = strdup(yylval.str);
+			type_identifier_stack[type_identifier_top] = strdup(yylval.s.str);
         }
         more_type_identifiers T_SINGLEEQ T_DATATYPE 
         {
@@ -306,7 +314,7 @@ more_type_identifiers :
         ',' T_IDENTIFIER 
         {
             type_identifier_top++;
-			type_identifier_stack[type_identifier_top] = strdup(yylval.str);
+			type_identifier_stack[type_identifier_top] = strdup(yylval.s.str);
         }
         more_type_identifiers
         |
@@ -322,7 +330,7 @@ decl_stmts :
         T_IDENTIFIER
         {
             var_name_stack_top++;
-			var_name_stack[var_name_stack_top] = strdup(yylval.str);
+			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         }
         more_decl_stmt ':' data_type ';'
         |
@@ -332,7 +340,7 @@ more_decl_stmt :
         ',' T_IDENTIFIER
         {
             type_identifier_top++;
-			type_identifier_stack[type_identifier_top] = strdup(yylval.str);
+			type_identifier_stack[type_identifier_top] = strdup(yylval.s.str);
         } 
         more_decl_stmt
         |
@@ -341,7 +349,7 @@ more_decl_stmt :
 data_type :
         T_TYPE
         {
-			int result = dump_stack_in_symbol_table(yylval.type, yylloc.first_line, yylloc.first_column);
+			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
                 if(!result){
                         yyerror(" abort, Variable already declared.");
                         exit(1);
@@ -353,7 +361,7 @@ data_type :
         T_IDENTIFIER
         {
             struct type_table *t = NULL;
-			HASH_FIND_STR(TYPE_TABLE,yylval.str,t);
+			HASH_FIND_STR(TYPE_TABLE,yylval.s.str,t);
 
 			if(t)
 			{
@@ -365,7 +373,7 @@ data_type :
 			}
 			else
 			{
-				printf("Alert : Type %s is not defined.",yylval.str);
+				printf("Alert : Type %s is not defined.",yylval.s.str);
 				YYABORT;
 			}
         }
@@ -390,13 +398,13 @@ function_and_procedure_block:
 procedure_block:
 		T_PROCEDURE T_IDENTIFIER
 		{
-			curr_scope_level = strdup(yylval.str);
+			curr_scope_level = strdup(yylval.s.str);
 			printf("Entering the Procedure %s\n", curr_scope_level);
 		}
 		';'  block ';'
 		| T_PROCEDURE T_IDENTIFIER 
 		{
-			curr_scope_level = strdup(yylval.str);
+			curr_scope_level = strdup(yylval.s.str);
 			printf("Entering the Procedure %s\n", curr_scope_level);
 		}
 		'(' param_list ')' ';'  block ';'
@@ -411,7 +419,7 @@ param_list:
 function_block:
 		T_FUNCTION T_IDENTIFIER
 		{
-			curr_scope_level = strdup(yylval.str);
+			curr_scope_level = strdup(yylval.s.str);
 			printf("Entering the Function %s\n", curr_scope_level);
 		}
 		':' T_DATATYPE ';'  block ';' 
@@ -421,7 +429,7 @@ function_block:
 		}
 		| T_FUNCTION T_IDENTIFIER 
 		{
-			curr_scope_level = strdup(yylval.str);
+			curr_scope_level = strdup(yylval.s.str);
 		}
 		'(' function_param_list ')' ':' T_DATATYPE ';'  block ';' 
 		{
@@ -434,11 +442,11 @@ function_param_list:
 		T_IDENTIFIER 
 		{
 			var_name_stack_top++;
-			var_name_stack[var_name_stack_top] = strdup(yylval.str);
+			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
 		}
 		more_func_identifiers ':' T_DATATYPE 
 		{
-		int result = dump_stack_in_symbol_table(yylval.type, yylloc.first_line, yylloc.first_column);
+		int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 		if(!result){
 				yyerror("Abort: Variable already declared.");
 				exit(1);
@@ -456,7 +464,7 @@ more_func_identifiers:
 		',' T_IDENTIFIER
 		{
 			var_name_stack_top++;
-			var_name_stack[var_name_stack_top] = strdup(yylval.str);
+			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
 		}
 		more_func_identifiers 
 		| 
@@ -481,17 +489,17 @@ print_statements:
 assignment_statements :
         T_IDENTIFIER 
         {
-			if(!check_valid_identifier(yylval.str)){
+			if(!check_valid_identifier(yylval.s.str)){
 				char error[1000];
 				//printf("Scope Level : %s ",curr_scope_level);
-				sprintf(error,"Abort: Variable %s is not declared.",yylval.str);
+				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
 				exit(1);
 			}
 			else
 			{
 				assignment_name_stack_top++;
-				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.str);
+				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
         assignment_operators expression
@@ -507,8 +515,8 @@ expression :
 		| simpleExpression T_GE simpleExpression
         {
                 // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
-			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
+            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+			$<intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			struct symbol_table *s = NULL;
 			char var_mang_name[31];
@@ -526,7 +534,7 @@ expression :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<intval>$;
+				temp->var_value.int_value = $<s.intval>$;
 				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
 			}
         }
@@ -560,7 +568,7 @@ simpleExpression :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<intval>$;
+				temp->var_value.int_value = $<s.intval>$;
 				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
 			}
         }
@@ -575,8 +583,8 @@ term :
 		| term '&' factor
 		{
                 // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<intval>1,$<intval>3,$<str>2);
-			$<intval>$ = solution($<intval>1,$<intval>3,$<str>2);
+            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+			$<intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			struct symbol_table *s = NULL;
 			char var_mang_name[31];
@@ -594,7 +602,7 @@ term :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<intval>$;
+				temp->var_value.int_value = $<s.intval>$;
 				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
 			}
         }
@@ -609,7 +617,7 @@ factor :
 		| T_IDENTIFIER
 		{
 			if(check_valid_identifier(yyval.str)) {
-				union data variable_value = get_identifier_data(yylval.str);
+				union data variable_value = get_identifier_data(yylval.s.str);
 				$<intval>$ = variable_value.int_value;
 			}
         }
@@ -699,7 +707,7 @@ value :
 				temp->scope_level = s->scope_level;
 				temp->line_no = s->line_no;
 				temp->col_no = s->col_no;
-				strcpy(temp->var_value.string_value,yylval.str);
+				strcpy(temp->var_value.string_value,yylval.s.str);
 				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
 			}
         }

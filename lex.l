@@ -2,13 +2,13 @@
 	#include<stdio.h>
 	#include<string.h>
 	void yyerror(char *s);
-	//#include "y.tab.h" token declarations from yacc file
-	#include "yy.tab.h"
+	#include "y.tab.h" //token declarations from yacc file
 	#include "uthash/src/uthash.h"
 	int yycolumn;
-	#define YY_USER_ACTION yyloc.first_line = yyloc.last_line = yylineno;\
-	yyloc.first_column = yycolumn; yyloc.last_column = yycolumn + yyleng - 1;\
-	yycolumn += yyleng;
+	// #define YY_USER_ACTION yyloc.first_line = yyloc.last_line = yylineno;\
+	// yyloc.first_column = yycolumn; yyloc.last_column = yycolumn + yyleng - 1;\
+	// yycolumn += yyleng;
+	int linenumber = 0;
 %}
 %option yylineno
 
@@ -24,10 +24,6 @@ opBool	true|false
 opString	\".*\"
 opExponent	([Ee][+-]?{digits})?
 number	{digits}{opFraction}{opExponent}
-// single eq is used as assignment operator only in const and var blocks.
-// Otherwise it is used as the relational operator ==
-// single eq also used to define variable type in the type block
-// type block is used for classes (need to use class keyword for this) or enumerated types
 single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
 multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
@@ -68,20 +64,20 @@ procedure		return T_PROCEDURE;
 
 {indextype}		return T_INDEXTYPE;
 {intval}		{
-	yylval.intval = atoi(yytext);
+	yylval.s.intval = atoi(yytext);
 	ECHO;
 	return T_INTVAL;
 }
 {floatval} 		{
-	yylval.floatlval = atoi(yytext);
+	yylval.s.floatval = atoi(yytext);
 	ECHO;
 	return T_FLOATVAL;
 }
 {boolval} 		{
 	if(strcmp(yytext, "true")==0) 
-		yylval.intval = 1;
+		yylval.s.intval = 1;
 	else
-		yylval.intval = 0;
+		yylval.s.intval = 0;
 	ECHO;
 	return T_BOOLVAL;
 }
@@ -93,7 +89,7 @@ of 				return T_OF;
 const 			return T_CONST;
 if				return T_IF;
 then 			return T_THEN;
-else			return T_ELSE:
+else			return T_ELSE;
 for				return T_FOR;
 to				return T_TO;
 downto			return T_DOWNTO;
@@ -105,7 +101,7 @@ writeln			return T_WRITELN;
 [\t|' ']+		;
 
 {datatypes} 	{
-	yyval.type = strdup(yytext);
+	yylval.s.type = strdup(yytext);
 	ECHO;
 	return T_DATATYPE;
 }
@@ -182,8 +178,6 @@ writeln			return T_WRITELN;
 "\n" {
 	yycolumn = 1;
 }
-
-. {}
 
 %%
 
