@@ -19,18 +19,15 @@ digit	[0-9]
 letter	[a-zA-Z]
 id	({letter}|_)({letter}|{digit})*
 digits	{digit}+
-opFraction	(\.{digits})?
-opBool	true|false
-opExponent	([Ee][+-]?{digits})?
-number	{digits}{opFraction}{opExponent}
+/*opExponent	([Ee][+-]?{digits})?*/
 single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
 multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
 paranthesis	\(|\)|\[|\]
-floatval {digits}(\.{digits})
-intval digits
+floatval [-+]?{digits}(\.{digits})
+intval {digits}
 boolval true|false
-stringval \".*\"|'.*'
+stringval \".*\"|\'.*\'
 datatypes integer|character|real|boolean|string
 punctuation ;|,|:|\.
 indextype [0-9]\.\.\.[0-9]+
@@ -68,11 +65,13 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	ECHO;
 	return T_INTVAL;
 }
+
 {floatval} 		{
-	yylval.s.floatval = atoi(yytext);
+	yylval.s.floatval = atof(yytext);
 	ECHO;
 	return T_FLOATVAL;
 }
+
 {boolval} 		{
 	if(strcmp(yytext, "true")==0) 
 		yylval.s.intval = 1;
@@ -80,6 +79,16 @@ procedure		{ ECHO; return T_PROCEDURE;}
 		yylval.s.intval = 0;
 	ECHO;
 	return T_BOOLVAL;
+}
+
+{stringval}		{
+	char temp[yyleng];
+	strncpy(temp, yytext+1, yyleng-2);
+	temp[yyleng-2] = '\0';
+	yylval.s.str = strdup(temp);
+	//printf("%s %s ",temp, yylval.s.str);
+	ECHO;
+	return T_STRINGVAL;
 }
 
 array			{ECHO; return T_ARRAY;}

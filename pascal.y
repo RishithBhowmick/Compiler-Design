@@ -267,6 +267,7 @@ constant :
         T_INTVAL
         | T_BOOLVAL
         | T_FLOATVAL
+        | T_STRINGVAL
         ;
 
 more_const_definition :
@@ -347,7 +348,7 @@ more_decl_stmt :
         ;
 
 data_type :
-        T_TYPE
+        T_DATATYPE
         {
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
                 if(!result){
