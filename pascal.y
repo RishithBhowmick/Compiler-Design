@@ -152,13 +152,11 @@
 %union {
 	struct parse_node
 	{
-		
 		char *str;
 		char *type;
 		int intval;
 		float floatval;
 		char* stringval;
-		// struct ast_node * ast;
 	}s;
 }
 
@@ -268,9 +266,7 @@ const_block :
         ;
 
 const_definition :
-        T_IDENTIFIER T_SINGLEEQ constant{ 			
-		//printf("%s %s %d %.5f %s %s\n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>3,$<s.stringval>1,$<s.type>3); 
-		// printf("yylval: %s\n",yylval.s.str);
+        T_IDENTIFIER T_SINGLEEQ constant{
 		struct symbol_table *s = NULL;
 		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
 		if(!s){
@@ -282,21 +278,19 @@ const_definition :
 			strcat(var_mang_name, "$");
 			strcat(var_mang_name, s->scope_level);
 			strcpy(s->var_name,var_mang_name);
+			printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
 			s->line_no = yylloc.first_line;
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
 				s->var_value.int_value = $<s.intval>3;
 			}
 			if(yylval.s.floatval!=0){
-				printf("%f", $<s.floatval>3);
 				s->var_value.float_value = $<s.floatval>3;
 			}
 
 			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
 			//printf("yayy\n");
-		}else{
-			//printf("ono\n");
-			}
+		}
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
 		
@@ -377,7 +371,7 @@ decl_stmts :
             var_name_stack_top++;
 			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         }
-        more_decl_stmt ':' data_type ';'
+        more_decl_stmt ':' data_type ';' decl_stmts
         |
         ;
 
@@ -772,17 +766,9 @@ assignment_operators :
         | T_AS_DIVE
         ;
 
-relational_operators :
-        T_SINGLEEQ
-        | '>'
-        | '<'
-        | T_GE
-        | T_LE
-        | T_NE
-
 if_statement :
-        T_IF '(' boolean_expression ')' T_THEN statements T_ELSE statements
-		| T_IF '(' boolean_expression ')' T_THEN statements
+        T_IF expression T_THEN statements T_ELSE statements
+		| T_IF expression T_THEN statements
         ;
 
 fordo_statement :
@@ -793,10 +779,6 @@ to_or_downto :
         T_TO
         | T_DOWNTO
         ;
-
-boolean_expression :
-		expression relational_operators expression
-;
 
 %%
 int yyerror(const char *message) {
