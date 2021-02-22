@@ -544,7 +544,7 @@ assignment_statements :
 				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
 				printf("---------------\n");
-				exit(1);	// this fixes segfault
+				//exit(1);	// this fixes segfault
 			}
 			else
 			{

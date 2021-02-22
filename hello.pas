@@ -3,7 +3,7 @@ uses crt;
 const
 PI=3.14;
 var
-num, i, sum: ineger;
+num, i, sum: nteger;
 condition: boolea;
 begin
 num:=5;
