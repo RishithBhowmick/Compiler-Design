@@ -152,13 +152,11 @@
 %union {
 	struct parse_node
 	{
-		
 		char *str;
 		char *type;
 		int intval;
 		float floatval;
 		char* stringval;
-		// struct ast_node * ast;
 	}s;
 }
 
@@ -231,6 +229,7 @@ startProg :
 
 program :
         programHeading block '.'
+		| error '.'
         ;
 
 programHeading :
@@ -250,7 +249,8 @@ uses_block :
                 // might need to edit so I'm leaving
                 // ast may come here (line 195)
         }
-        |
+        | error ';'
+		|
         ;
 
 other_libs :
@@ -268,9 +268,7 @@ const_block :
         ;
 
 const_definition :
-        T_IDENTIFIER T_SINGLEEQ constant{ 			
-		//printf("%s %s %d %.5f %s %s\n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>3,$<s.stringval>1,$<s.type>3); 
-		// printf("yylval: %s\n",yylval.s.str);
+        T_IDENTIFIER T_SINGLEEQ constant{
 		struct symbol_table *s = NULL;
 		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
 		if(!s){
@@ -282,25 +280,24 @@ const_definition :
 			strcat(var_mang_name, "$");
 			strcat(var_mang_name, s->scope_level);
 			strcpy(s->var_name,var_mang_name);
+			printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
 			s->line_no = yylloc.first_line;
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
 				s->var_value.int_value = $<s.intval>3;
 			}
 			if(yylval.s.floatval!=0){
-				printf("%f", $<s.floatval>3);
 				s->var_value.float_value = $<s.floatval>3;
 			}
 
 			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
 			//printf("yayy\n");
-		}else{
-			//printf("ono\n");
-			}
+		}
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
 		
 		}';' more_const_definition
+		| error ';'
         ;
 
 constant :
@@ -316,7 +313,8 @@ more_const_definition :
 			// var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
 		}
 		';' more_const_definition
-        |
+        | error ';'
+		|
         ;
 
 type_block :
@@ -352,7 +350,8 @@ type_definition :
 			type_identifier_top = -1;
         }
         ';' type_definition
-        |
+        | error ';'
+		|
         ;
 
 more_type_identifiers :
@@ -377,8 +376,9 @@ decl_stmts :
             var_name_stack_top++;
 			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         }
-        more_decl_stmt ':' data_type ';'
-        |
+        more_decl_stmt ':' data_type ';' decl_stmts
+        | error ';'
+		|
         ;
 
 more_decl_stmt :
@@ -397,8 +397,7 @@ data_type :
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 			if(!result){
 					yyerror(" abort, Variable already declared.");
-					exit(1);
-
+					// exit(1);
 			}
 
 		}
@@ -413,13 +412,13 @@ data_type :
 				int result = dump_stack_in_symbol_table(t->actual_type_name, yylloc.first_line, yylloc.first_column);
 				if(!result){
 				yyerror("abort Variable already declared.");
-				exit(1);
+				// exit(1);
 				}
 			}
 			else
 			{
-				printf("Alert : Type %s is not defined.",yylval.s.str);
-				YYABORT;
+				yyerror("Alert : Type is not defined.\n");
+				// exit(1);
 			}
         }
         | T_ARRAY '[' T_INDEXTYPE ']' T_OF T_DATATYPE
@@ -427,9 +426,7 @@ data_type :
 			//printf("Hit the type part of line %s\n", yylval.type);
 			int result = dump_stack_in_symbol_table("array", yylloc.first_line, yylloc.first_column);
 			if(!result){
-				//printf("DumpBck in Variable: %d\n",result);
 				yyerror("Abort: Variable already declared.");
-				exit(1);
 			}
 		}
         ;  
@@ -494,7 +491,6 @@ function_param_list:
 		int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 		if(!result){
 				yyerror("Abort: Variable already declared.");
-				exit(1);
 			}
 		}
 		function_param_continue
@@ -502,6 +498,7 @@ function_param_list:
 
 function_param_continue :
 		';' function_param_list
+		| error ';'
 		|
 		;
 
@@ -522,6 +519,7 @@ execution_block :
 statementList :
 		statements
 		| statements ';' statementList
+		| error ';' 
 		;
 
 statements :
@@ -545,7 +543,8 @@ assignment_statements :
 				//printf("Scope Level : %s ",curr_scope_level);
 				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
-				exit(1);
+				printf("---------------\n");
+				//exit(1);	// this fixes segfault
 			}
 			else
 			{
@@ -569,24 +568,38 @@ expression :
             printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
 			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
+			if(assignment_name_stack_top == -1) {
+				break;
+			}
+			else 
 			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<s.intval>$;
-				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.int_value = $<s.intval>$;
+					HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
         ;
@@ -599,28 +612,42 @@ simpleExpression :
 		| simpleExpression '|' term
 		| simpleExpression '!' term
 		{
-                // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
-			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
-			
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
-			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<s.intval>$;
-				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+			if(assignment_name_stack_top == -1) {
+				break;
+			}
+			else 
+            {    
+				// not sure what this is so I left      
+				printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+				$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
+				
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.int_value = $<s.intval>$;
+					HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
 		;
@@ -633,28 +660,42 @@ term :
 		| term T_BOOL_AND factor
 		| term '&' factor
 		{
-                // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
-			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
-			
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
-			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = $<s.intval>$;
-				HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+			if (assignment_name_stack_top == -1) {
+				break;
+			}
+			else 
+            {
+				// not sure what this is so I left      
+				printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+				$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
+				
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.int_value = $<s.intval>$;
+					HASH_REPLACE_STR(SYMBOL_TABLE, var_name, temp, r);  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
 		;
@@ -676,90 +717,148 @@ factor :
 value :
         T_INTVAL
         {
-            struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
-			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = yylval.s.intval;
-				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+			if(assignment_name_stack_top == -1) {
+				break;
 			}
+			else {
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				printf("\tmaybe here seg fault 1\n");
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				printf("seg fault1\n");
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					printf("maybe here seg fault2\n");
+					strcpy(temp->type, s->type);
+					printf("seg fault2\n");
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.int_value = yylval.s.intval;
+					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
+			}
+            
         }
         | T_FLOATVAL
         {
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
+			if(assignment_name_stack_top == -1) {
+				break;
+			}
+			else 
 			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.float_value = yylval.s.floatval;
-				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.float_value = yylval.s.floatval;
+					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
         | T_BOOLVAL
         {
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
+			if(assignment_name_stack_top == -1) {
+				break;
+			}
+			else 
 			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				temp->var_value.int_value = yylval.s.intval;
-				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					temp->var_value.int_value = yylval.s.intval;
+					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
         | T_STRINGVAL
         {
-			struct symbol_table *s = NULL;
-			char var_mang_name[31];
-			strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-			strcat(var_mang_name, "$");
-			strcat(var_mang_name, curr_scope_level);
-			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-			if(s)
-			{
-				struct symbol_table *temp = NULL;
-				struct symbol_table *r = NULL;
-				temp = malloc(sizeof(struct symbol_table));
-				strcat(temp->var_name, var_mang_name);
-				strcpy(temp->type, s->type);
-				temp->scope_level = s->scope_level;
-				temp->line_no = s->line_no;
-				temp->col_no = s->col_no;
-				strcpy(temp->var_value.string_value,yylval.s.str);
-				HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+			if(assignment_name_stack_top == -1) {
+				break;
+			}
+			else {
+				struct symbol_table *s = NULL;
+				char var_mang_name[31];
+				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, curr_scope_level);
+				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+				if(s)
+				{
+					struct symbol_table *temp = NULL;
+					struct symbol_table *r = NULL;
+					temp = malloc(sizeof(struct symbol_table));
+					strcat(temp->var_name, var_mang_name);
+					strcpy(temp->type, s->type);
+					temp->scope_level = s->scope_level;
+					temp->line_no = s->line_no;
+					temp->col_no = s->col_no;
+					strcpy(temp->var_value.string_value,yylval.s.str);
+					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
+				}
+				else {
+					char error[1000];
+					//printf("Scope Level : %s ",curr_scope_level);
+					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					yyerror(error);
+					printf("---------------\n");
+				}
 			}
         }
         ;
@@ -772,17 +871,9 @@ assignment_operators :
         | T_AS_DIVE
         ;
 
-relational_operators :
-        T_SINGLEEQ
-        | '>'
-        | '<'
-        | T_GE
-        | T_LE
-        | T_NE
-
 if_statement :
-        T_IF '(' boolean_expression ')' T_THEN statements T_ELSE statements
-		| T_IF '(' boolean_expression ')' T_THEN statements
+        T_IF expression T_THEN statements T_ELSE statements
+		| T_IF expression T_THEN statements
         ;
 
 fordo_statement :
@@ -793,10 +884,6 @@ to_or_downto :
         T_TO
         | T_DOWNTO
         ;
-
-boolean_expression :
-		expression relational_operators expression
-;
 
 %%
 int yyerror(const char *message) {
