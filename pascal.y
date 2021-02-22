@@ -340,8 +340,8 @@ decl_stmts :
 more_decl_stmt :
         ',' T_IDENTIFIER
         {
-            type_identifier_top++;
-			type_identifier_stack[type_identifier_top] = strdup(yylval.s.str);
+            var_name_stack_top++;
+			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         } 
         more_decl_stmt
         |
@@ -351,11 +351,11 @@ data_type :
         T_DATATYPE
         {
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
-                if(!result){
-                        yyerror(" abort, Variable already declared.");
-                        exit(1);
+			if(!result){
+					yyerror(" abort, Variable already declared.");
+					exit(1);
 
-                }
+			}
 
 		}
         |
