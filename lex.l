@@ -62,12 +62,14 @@ procedure		{ ECHO; return T_PROCEDURE;}
 {indextype}		{ECHO; return T_INDEXTYPE;}
 {intval}		{
 	yylval.s.intval = atoi(yytext);
+	yylval.s.type = strdup("integer");
 	ECHO;
 	return T_INTVAL;
 }
 
 {floatval} 		{
 	yylval.s.floatval = atof(yytext);
+	yylval.s.type = strdup("float");
 	ECHO;
 	return T_FLOATVAL;
 }
@@ -78,6 +80,7 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	else
 		yylval.s.intval = 0;
 	ECHO;
+	yylval.s.type = strdup("boolean");
 	return T_BOOLVAL;
 }
 
@@ -86,6 +89,7 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	strncpy(temp, yytext+1, yyleng-2);
 	temp[yyleng-2] = '\0';
 	yylval.s.str = strdup(temp);
+	yylval.s.type = strdup("string");
 	//printf("%s %s ",temp, yylval.s.str);
 	ECHO;
 	return T_STRINGVAL;

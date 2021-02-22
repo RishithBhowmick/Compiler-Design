@@ -269,27 +269,29 @@ const_block :
 
 const_definition :
         T_IDENTIFIER T_SINGLEEQ constant{ 			
-		printf("%s %s %d %.5f %s \n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>3,$<s.stringval>1); 
+		//printf("%s %s %d %.5f %s %s\n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>3,$<s.stringval>1,$<s.type>3); 
 		// printf("yylval: %s\n",yylval.s.str);
 		struct symbol_table *s = NULL;
 		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
 		if(!s){
 			s = malloc(sizeof(struct symbol_table));
 			strcpy(s->var_name,yylval.s.str);
-			strcpy(s->type,"const");
+			strcpy(s->type,yylval.s.type);
+			s->scope_level = strdup("const");
 			s->line_no = yylloc.first_line;
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
 				s->var_value.int_value = $<s.intval>3;
 			}
 			if(yylval.s.floatval!=0){
+				printf("%f", $<s.floatval>3);
 				s->var_value.float_value = $<s.floatval>3;
 			}
 
 			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
-			printf("yayy\n");
+			//printf("yayy\n");
 		}else{
-			printf("ono\n");
+			//printf("ono\n");
 			}
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
@@ -853,7 +855,7 @@ int main(int argc,char* argv[]) {
 				else if(strcmp(s->type,"integer")==0){
 					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
 				}
-				else if(strcmp(s->type,"real")==0){
+				else if(strcmp(s->type,"float")==0){
 					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
 				}
 				else if(strcmp(s->type,"boolean")==0){
