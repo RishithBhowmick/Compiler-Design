@@ -157,6 +157,7 @@
 		char *type;
 		int intval;
 		float floatval;
+		char* stringval;
 		// struct ast_node * ast;
 	}s;
 }
@@ -233,7 +234,7 @@ program :
         ;
 
 programHeading :
-        T_PROGRAM T_IDENTIFIER {printf("Here I am\n");} ';'
+        T_PROGRAM T_IDENTIFIER ';'
         ;
 
 // just | followed by ; is for lambda
@@ -268,21 +269,21 @@ const_block :
 
 const_definition :
         T_IDENTIFIER T_SINGLEEQ constant{ 			
-		// printf("%s %s %d %.5f \n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>1); 
-		printf("yylval: %s\n",yylval.s.str);
+		printf("%s %s %d %.5f %s \n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>3,$<s.stringval>1); 
+		// printf("yylval: %s\n",yylval.s.str);
 		struct symbol_table *s = NULL;
 		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
 		if(!s){
 			s = malloc(sizeof(struct symbol_table));
 			strcpy(s->var_name,yylval.s.str);
-			strcpy(s->type,yylval.s.type);
+			strcpy(s->type,"const");
 			s->line_no = yylloc.first_line;
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
-				s->var_value.int_value = yylval.s.intval;
+				s->var_value.int_value = $<s.intval>3;
 			}
 			if(yylval.s.floatval!=0){
-				s->var_value.float_value = yylval.s.floatval;
+				s->var_value.float_value = $<s.floatval>3;
 			}
 
 			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);

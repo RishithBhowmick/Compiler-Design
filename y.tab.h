@@ -158,10 +158,11 @@ union YYSTYPE
 		char *type;
 		int intval;
 		float floatval;
+		char* stringval;
 		// struct ast_node * ast;
 	}s;
 
-#line 165 "y.tab.h"
+#line 166 "y.tab.h"
 
 };
 typedef union YYSTYPE YYSTYPE;
