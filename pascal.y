@@ -23,7 +23,6 @@
 	char *curr_scope_level = "global";
 
 	// struct variable_type_info var_type_information;
-	
 	struct symbol_table *SYMBOL_TABLE = NULL; /*Generic Symbol Table*/
 	// We are using a hash table as the data structure for the symbol table
 	//	Hash tables are efficient data structures for this purpose 
@@ -37,6 +36,14 @@
 		char actual_type_name[31];
 		UT_hash_handle hh;
 	};
+	
+	struct const_table{
+		char var_name[31];
+		char* type;
+		union data var_value;
+		UT_hash_handle hh;
+	};
+	struct const_table* CONST_TABLE = NULL;
 	struct type_table *TYPE_TABLE = NULL;
 
 	int dump_stack_in_symbol_table(char *type, int line_no, int col_no) {
@@ -226,7 +233,7 @@ program :
         ;
 
 programHeading :
-        T_PROGRAM T_IDENTIFIER ';'
+        T_PROGRAM T_IDENTIFIER {printf("Here I am\n");} ';'
         ;
 
 // just | followed by ; is for lambda
@@ -260,7 +267,33 @@ const_block :
         ;
 
 const_definition :
-        T_IDENTIFIER T_SINGLEEQ constant ';' more_const_definition
+        T_IDENTIFIER T_SINGLEEQ constant{ 			
+		// printf("%s %s %d %.5f \n",$<s.str>1,$<s.type>1,$<s.intval>1,$<s.floatval>1); 
+		printf("yylval: %s\n",yylval.s.str);
+		struct symbol_table *s = NULL;
+		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
+		if(!s){
+			s = malloc(sizeof(struct symbol_table));
+			strcpy(s->var_name,yylval.s.str);
+			strcpy(s->type,yylval.s.type);
+			s->line_no = yylloc.first_line;
+			s->col_no = yylloc.first_column;
+			if(yylval.s.intval!=0){
+				s->var_value.int_value = yylval.s.intval;
+			}
+			if(yylval.s.floatval!=0){
+				s->var_value.float_value = yylval.s.floatval;
+			}
+
+			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
+			printf("yayy\n");
+		}else{
+			printf("ono\n");
+			}
+		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
+		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
+		
+		}';' more_const_definition
         ;
 
 constant :
@@ -271,7 +304,11 @@ constant :
         ;
 
 more_const_definition :
-        T_IDENTIFIER T_SINGLEEQ constant ';' more_const_definition
+        T_IDENTIFIER T_SINGLEEQ constant{
+			// var_name_stack_top++;
+			// var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
+		}
+		';' more_const_definition
         |
         ;
 
@@ -803,6 +840,7 @@ int main(int argc,char* argv[]) {
 		printf("Took : %lf seconds\n", time_elapsed(&start, &end));
 
 		printf("\n\nSymbol Table Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
+		printf("\n\nConst Table Current Size:%d\n",HASH_COUNT(CONST_TABLE));
 
 		struct symbol_table *s;
 		int i=0;

@@ -5,9 +5,9 @@
 	#include "y.tab.h" //token declarations from yacc file
 	#include "uthash/src/uthash.h"
 	int yycolumn;
-	// #define YY_USER_ACTION yyloc.first_line = yyloc.last_line = yylineno;\
-	// yyloc.first_column = yycolumn; yyloc.last_column = yycolumn + yyleng - 1;\
-	// yycolumn += yyleng;
+	#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno;\
+	yylloc.first_column = yycolumn; yylloc.last_column = yycolumn + yyleng - 1;\
+	yycolumn += yyleng;
 	int linenumber = 0;
 %}
 %option yylineno
