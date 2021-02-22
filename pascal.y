@@ -471,14 +471,20 @@ more_func_identifiers:
 		;
 
 execution_block :
-        T_BEGIN execution_body T_END
+        T_BEGIN statementList T_END
         ;
 
-execution_body :
-        execution_body assignment_statements 
-        | execution_body if_statement
-        | execution_body fordo_statement
-        | execution_body print_statements
+statementList :
+		statements
+		| statements ';' statementList
+		;
+
+statements :
+		execution_block
+		| assignment_statements 
+        | if_statement
+        | fordo_statement
+        | print_statements
         |
         ;
 	
@@ -730,25 +736,12 @@ relational_operators :
         | T_NE
 
 if_statement :
-        T_IF '(' boolean_expression ')' T_THEN execution_body if_then_follow
+        T_IF '(' boolean_expression ')' T_THEN statements T_ELSE statements
+		| T_IF '(' boolean_expression ')' T_THEN statements
         ;
 
-if_then_follow :
-		else_if_block
-		| else_block
-		|
-		;
-	
-else_if_block :
-		T_ELSE if_statement
-		;
-
-else_block :
-		T_ELSE execution_body;
-		;
-
 fordo_statement :
-        T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression T_DO execution_body
+        T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression T_DO statements
         ;
 
 to_or_downto :
