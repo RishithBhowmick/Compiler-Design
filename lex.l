@@ -86,7 +86,7 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	strncpy(temp, yytext+1, yyleng-2);
 	temp[yyleng-2] = '\0';
 	yylval.s.str = strdup(temp);
-	//printf("%s %s ",temp, yylval.s.str);
+	/* printf("%s %s ",temp, yylval.s.str); */
 	ECHO;
 	return T_STRINGVAL;
 }
@@ -103,6 +103,7 @@ downto			{ECHO; return T_DOWNTO;}
 do				{ECHO; return T_DO;}
 read			;
 readln			;
+readkey			;
 write			{ECHO; return T_WRITE;}
 writeln			{ECHO; return T_WRITELN;}
 [\t|' ']+		ECHO;

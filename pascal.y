@@ -49,7 +49,7 @@
 			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
 			if(!s)
 			{
-				printf("Alert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+				printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
 				s = malloc(sizeof(struct symbol_table));
 				strcat(s->var_name, var_mang_name);
 				strcpy(s->type, type);
