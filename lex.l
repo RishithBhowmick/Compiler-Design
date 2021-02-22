@@ -17,7 +17,7 @@
 
 digit	[0-9]
 letter	[a-zA-Z]
-id	({letter}|_)({letter}|{digit})*
+id	({letter}|_)({letter}|{digit}|_)*
 digits	{digit}+
 /*opExponent	([Ee][+-]?{digits})?*/
 single_eq	=
@@ -27,7 +27,7 @@ paranthesis	\(|\)|\[|\]
 floatval [-+]?{digits}(\.{digits})
 intval {digits}
 boolval true|false
-stringval \".*\"|\'.*\'
+stringval \'.*\'
 datatypes integer|character|real|boolean|string
 punctuation ;|,|:|\.
 indextype [0-9]\.\.\.[0-9]+
@@ -50,27 +50,27 @@ indextype [0-9]\.\.\.[0-9]+
 <IN_SINGLELINE_COMMENT>.	;
 
 
-program			{ ECHO; return T_PROGRAM;}
-uses			{ ECHO; return T_USES;}
-type			{ ECHO; return T_TYPE;}
-var				{ ECHO; return T_VAR;}
-begin 			{ ECHO; return T_BEGIN;}
-end 			{ ECHO; return T_END;}
-function		{ ECHO; return T_FUNCTION;}
-procedure		{ ECHO; return T_PROCEDURE;}
+program			{   return T_PROGRAM;}
+uses			{  return T_USES;}
+type			{  return T_TYPE;}
+var				{  return T_VAR;}
+begin 			{  return T_BEGIN;}
+end 			{  return T_END;}
+function		{  return T_FUNCTION;}
+procedure		{  return T_PROCEDURE;}
 
-{indextype}		{ECHO; return T_INDEXTYPE;}
+{indextype}		{ return T_INDEXTYPE;}
 {intval}		{
 	yylval.s.intval = atoi(yytext);
 	yylval.s.type = strdup("integer");
-	ECHO;
+	
 	return T_INTVAL;
 }
 
 {floatval} 		{
 	yylval.s.floatval = atof(yytext);
 	yylval.s.type = strdup("float");
-	ECHO;
+	
 	return T_FLOATVAL;
 }
 
@@ -79,7 +79,7 @@ procedure		{ ECHO; return T_PROCEDURE;}
 		yylval.s.intval = 1;
 	else
 		yylval.s.intval = 0;
-	ECHO;
+	
 	yylval.s.type = strdup("boolean");
 	return T_BOOLVAL;
 }
@@ -91,30 +91,30 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	yylval.s.str = strdup(temp);
 	yylval.s.type = strdup("string");
 	//printf("%s %s ",temp, yylval.s.str);
-	ECHO;
+	
 	return T_STRINGVAL;
 }
 
-array			{ECHO; return T_ARRAY;}
-of 				{ECHO; return T_OF;}
-const 			{ECHO; return T_CONST;}
-if				{ECHO; return T_IF;}
-then 			{ECHO; return T_THEN;}
-else			{ECHO; return T_ELSE;}
-for				{ECHO; return T_FOR;}
-to				{ECHO; return T_TO;}
-downto			{ECHO; return T_DOWNTO;}
-do				{ECHO; return T_DO;}
+array			{ return T_ARRAY;}
+of 				{ return T_OF;}
+const 			{ return T_CONST;}
+if				{ return T_IF;}
+then 			{ return T_THEN;}
+else			{ return T_ELSE;}
+for				{ return T_FOR;}
+to				{ return T_TO;}
+downto			{ return T_DOWNTO;}
+do				{ return T_DO;}
 read			;
 readln			;
 readkey			;
-write			{ECHO; return T_WRITE;}
-writeln			{ECHO; return T_WRITELN;}
-[\t|' ']+		ECHO;
+write			{ return T_WRITE;}
+writeln			{ return T_WRITELN;}
+[\t|' ']+		
 
 {datatypes} 	{
 	yylval.s.type = strdup(yytext);
-	ECHO;
+	
 	return T_DATATYPE;
 }
 
@@ -125,87 +125,87 @@ writeln			{ECHO; return T_WRITELN;}
 	char temp[32];
 	strncpy(temp,yytext,31);
 	yylval.s.str = strdup(temp);
-	ECHO;
+	
 	return T_IDENTIFIER;
 }
 
 {single_char_op}   {
-	ECHO;
+	
 	return yytext[0];
 }
 
 {single_eq}   {
-	ECHO;
+	
 	return T_SINGLEEQ;
 }
 
 {multiple_char_op}  {
 	if(strcmp(yytext, "and") == 0) {
-		ECHO;
+		
 		return T_BOOL_AND;
 	}
 	else if(strcmp(yytext, "or") == 0) {
-		ECHO;
+		
 		return T_BOOL_OR;
 	}
 	else if(strcmp(yytext, "not") == 0) {
-		ECHO;
+		
 		return T_BOOL_NOT;
 	}
 	else if(strcmp(yytext, "<=") == 0) {
-		ECHO;
+		
 		return T_LE;
 	}
 	else if(strcmp(yytext, ">=") == 0) {
-		ECHO;
+		
 		return T_GE;
 	}
 	else if(strcmp(yytext, "<>") == 0) {
-		ECHO;
+		
 		return T_NE;
 	}
 	else if(strcmp(yytext, "<<") == 0) {
-		ECHO;
+		
 		return T_BIT_LEFT_SHIFT;
 	}
 	else if(strcmp(yytext, ">>") == 0) {
-		ECHO;
+		
 		return T_BIT_RIGHT_SHIFT;
 	}
 	else if(strcmp(yytext, ":=") == 0) {
-		ECHO;
+		
 		return T_ASOP;
 	}
 	else if(strcmp(yytext, "+=") == 0) {
-		ECHO;
+		
 		return T_AS_PE;
 	}
 	else if(strcmp(yytext, "-=") == 0) {
-		ECHO;
+		
 		return T_AS_SE;
 	}
 	else if(strcmp(yytext, "*=") == 0) {
-		ECHO;
+		
 		return T_AS_MULE;
 	}
 	else if(strcmp(yytext, "/=") == 0) {
-		ECHO;
+		
 		return T_AS_DIVE;
 	}
 }
 
 {paranthesis} {
-	ECHO;
+	
 	return yytext[0];
 }
 
 {punctuation} {
-	ECHO;
+	
 	return yytext[0];
 }
 
 "\n" {
-	ECHO;
+	
 	yycolumn = 1;
 	linenumber++;
 }

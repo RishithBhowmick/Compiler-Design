@@ -56,7 +56,7 @@
 			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
 			if(!s)
 			{
-				printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+				// printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
 				s = malloc(sizeof(struct symbol_table));
 				strcat(s->var_name, var_mang_name);
 				strcpy(s->type, type);
@@ -280,7 +280,7 @@ const_definition :
 			strcat(var_mang_name, "$");
 			strcat(var_mang_name, s->scope_level);
 			strcpy(s->var_name,var_mang_name);
-			printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+			// printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
 			s->line_no = yylloc.first_line;
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
@@ -396,8 +396,7 @@ data_type :
         {
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 			if(!result){
-					yyerror(" abort, Variable already declared.");
-					// exit(1);
+					yyerror("Variable already declared.");
 			}
 
 		}
@@ -411,14 +410,14 @@ data_type :
 			{
 				int result = dump_stack_in_symbol_table(t->actual_type_name, yylloc.first_line, yylloc.first_column);
 				if(!result){
-				yyerror("abort Variable already declared.");
-				// exit(1);
+					yyerror("Variable already declared.");
 				}
 			}
 			else
 			{
-				yyerror("Alert : Type is not defined.\n");
-				// exit(1);
+				char error[1000];
+				sprintf(error, "Data type %s is not defined.", yylval.s.str);
+				yyerror(error);
 			}
         }
         | T_ARRAY '[' T_INDEXTYPE ']' T_OF T_DATATYPE
@@ -426,7 +425,7 @@ data_type :
 			//printf("Hit the type part of line %s\n", yylval.type);
 			int result = dump_stack_in_symbol_table("array", yylloc.first_line, yylloc.first_column);
 			if(!result){
-				yyerror("Abort: Variable already declared.");
+				yyerror("Variable already declared.");
 			}
 		}
         ;  
@@ -490,7 +489,7 @@ function_param_list:
 		{
 		int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 		if(!result){
-				yyerror("Abort: Variable already declared.");
+				yyerror("Variable already declared.");
 			}
 		}
 		function_param_continue
@@ -541,9 +540,9 @@ assignment_statements :
 			if(!check_valid_identifier(yylval.s.str)){
 				char error[1000];
 				//printf("Scope Level : %s ",curr_scope_level);
-				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+				sprintf(error,"Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
-				printf("---------------\n");
+				// printf("---------------\n");
 				//exit(1);	// this fixes segfault
 			}
 			else
@@ -596,9 +595,9 @@ expression :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -644,9 +643,9 @@ simpleExpression :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -692,9 +691,9 @@ term :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -723,9 +722,7 @@ value :
 			else {
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
-				printf("\tmaybe here seg fault 1\n");
 				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
-				printf("seg fault1\n");
 				strcat(var_mang_name, "$");
 				strcat(var_mang_name, curr_scope_level);
 				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
@@ -735,21 +732,20 @@ value :
 					struct symbol_table *r = NULL;
 					temp = malloc(sizeof(struct symbol_table));
 					strcat(temp->var_name, var_mang_name);
-					printf("maybe here seg fault2\n");
 					strcpy(temp->type, s->type);
-					printf("seg fault2\n");
 					temp->scope_level = s->scope_level;
 					temp->line_no = s->line_no;
 					temp->col_no = s->col_no;
 					temp->var_value.int_value = yylval.s.intval;
 					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
+					assignment_name_stack[assignment_name_stack_top--] = NULL;
 				}
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
             
@@ -784,9 +780,9 @@ value :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -820,9 +816,9 @@ value :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -855,9 +851,9 @@ value :
 				else {
 					char error[1000];
 					//printf("Scope Level : %s ",curr_scope_level);
-					sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
+					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					printf("---------------\n");
+					// printf("---------------\n");
 				}
 			}
         }
@@ -887,8 +883,10 @@ to_or_downto :
 
 %%
 int yyerror(const char *message) {
+	printf("\033[0;31m");
 	printf("\n\nInvalid Syntax:%d:%d Reason being %s\n",yylloc.first_line,yylloc.first_column,message);
-	printf("Compilation Failed\n");
+	printf("\033[0;37m");
+	// printf("Compilation Failed\n");
 	successful=0;
 	return 0;
 }
@@ -930,9 +928,11 @@ int main(int argc,char* argv[]) {
 	yyparse();
 	clock_gettime(CLOCK_REALTIME, &end);
 	if(successful){
+		printf("\033[0;32m");
 		printf("\n\nCompiled Successfully\n");
 		printf("Took : %lf seconds\n", time_elapsed(&start, &end));
 
+		printf("\033[0;37m");
 		printf("\n\nSymbol Table Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
 
 		struct symbol_table *s;
@@ -957,6 +957,10 @@ int main(int argc,char* argv[]) {
 
 	    }
 
+	}
+	else {
+		printf("\033[0;37m");
+		printf("\nOH NO! Compilation Failed! :( \n");
 	}
 
 }
