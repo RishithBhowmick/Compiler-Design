@@ -229,6 +229,7 @@ startProg :
 
 program :
         programHeading block '.'
+		| error '.'
         ;
 
 programHeading :
@@ -248,7 +249,8 @@ uses_block :
                 // might need to edit so I'm leaving
                 // ast may come here (line 195)
         }
-        |
+        | error ';'
+		|
         ;
 
 other_libs :
@@ -295,6 +297,7 @@ const_definition :
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
 		
 		}';' more_const_definition
+		| error ';'
         ;
 
 constant :
@@ -310,7 +313,8 @@ more_const_definition :
 			// var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
 		}
 		';' more_const_definition
-        |
+        | error ';'
+		|
         ;
 
 type_block :
@@ -346,7 +350,8 @@ type_definition :
 			type_identifier_top = -1;
         }
         ';' type_definition
-        |
+        | error ';'
+		|
         ;
 
 more_type_identifiers :
@@ -372,7 +377,8 @@ decl_stmts :
 			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         }
         more_decl_stmt ':' data_type ';' decl_stmts
-        |
+        | error ';'
+		|
         ;
 
 more_decl_stmt :
@@ -391,6 +397,7 @@ data_type :
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 			if(!result){
 					yyerror(" abort, Variable already declared.");
+					// exit(1);
 			}
 
 		}
@@ -405,11 +412,13 @@ data_type :
 				int result = dump_stack_in_symbol_table(t->actual_type_name, yylloc.first_line, yylloc.first_column);
 				if(!result){
 				yyerror("abort Variable already declared.");
+				// exit(1);
 				}
 			}
 			else
 			{
 				yyerror("Alert : Type is not defined.\n");
+				// exit(1);
 			}
         }
         | T_ARRAY '[' T_INDEXTYPE ']' T_OF T_DATATYPE
@@ -489,6 +498,7 @@ function_param_list:
 
 function_param_continue :
 		';' function_param_list
+		| error ';'
 		|
 		;
 
@@ -509,6 +519,7 @@ execution_block :
 statementList :
 		statements
 		| statements ';' statementList
+		| error ';' 
 		;
 
 statements :
@@ -532,6 +543,8 @@ assignment_statements :
 				//printf("Scope Level : %s ",curr_scope_level);
 				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
+				printf("---------------\n");
+				exit(1);	// this fixes segfault
 			}
 			else
 			{
