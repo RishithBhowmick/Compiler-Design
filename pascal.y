@@ -391,8 +391,6 @@ data_type :
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 			if(!result){
 					yyerror(" abort, Variable already declared.");
-					exit(1);
-
 			}
 
 		}
@@ -407,13 +405,11 @@ data_type :
 				int result = dump_stack_in_symbol_table(t->actual_type_name, yylloc.first_line, yylloc.first_column);
 				if(!result){
 				yyerror("abort Variable already declared.");
-				exit(1);
 				}
 			}
 			else
 			{
-				printf("Alert : Type %s is not defined.",yylval.s.str);
-				YYABORT;
+				yyerror("Alert : Type is not defined.\n");
 			}
         }
         | T_ARRAY '[' T_INDEXTYPE ']' T_OF T_DATATYPE
@@ -421,9 +417,7 @@ data_type :
 			//printf("Hit the type part of line %s\n", yylval.type);
 			int result = dump_stack_in_symbol_table("array", yylloc.first_line, yylloc.first_column);
 			if(!result){
-				//printf("DumpBck in Variable: %d\n",result);
 				yyerror("Abort: Variable already declared.");
-				exit(1);
 			}
 		}
         ;  
@@ -488,7 +482,6 @@ function_param_list:
 		int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 		if(!result){
 				yyerror("Abort: Variable already declared.");
-				exit(1);
 			}
 		}
 		function_param_continue
@@ -539,7 +532,6 @@ assignment_statements :
 				//printf("Scope Level : %s ",curr_scope_level);
 				sprintf(error,"Abort: Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
-				exit(1);
 			}
 			else
 			{
