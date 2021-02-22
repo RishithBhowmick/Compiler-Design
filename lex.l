@@ -5,9 +5,9 @@
 	#include "y.tab.h" //token declarations from yacc file
 	#include "uthash/src/uthash.h"
 	int yycolumn;
-	// #define YY_USER_ACTION yyloc.first_line = yyloc.last_line = yylineno;\
-	// yyloc.first_column = yycolumn; yyloc.last_column = yycolumn + yyleng - 1;\
-	// yycolumn += yyleng;
+	#define YY_USER_ACTION yylloc.first_line = yylloc.last_line = yylineno;\
+	yylloc.first_column = yycolumn; yylloc.last_column = yycolumn + yyleng - 1;\
+	yycolumn += yyleng;
 	int linenumber = 0;
 %}
 %option yylineno
@@ -62,12 +62,14 @@ procedure		{ ECHO; return T_PROCEDURE;}
 {indextype}		{ECHO; return T_INDEXTYPE;}
 {intval}		{
 	yylval.s.intval = atoi(yytext);
+	yylval.s.type = strdup("integer");
 	ECHO;
 	return T_INTVAL;
 }
 
 {floatval} 		{
 	yylval.s.floatval = atof(yytext);
+	yylval.s.type = strdup("float");
 	ECHO;
 	return T_FLOATVAL;
 }
@@ -78,6 +80,7 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	else
 		yylval.s.intval = 0;
 	ECHO;
+	yylval.s.type = strdup("boolean");
 	return T_BOOLVAL;
 }
 
@@ -86,7 +89,8 @@ procedure		{ ECHO; return T_PROCEDURE;}
 	strncpy(temp, yytext+1, yyleng-2);
 	temp[yyleng-2] = '\0';
 	yylval.s.str = strdup(temp);
-	/* printf("%s %s ",temp, yylval.s.str); */
+	yylval.s.type = strdup("string");
+	//printf("%s %s ",temp, yylval.s.str);
 	ECHO;
 	return T_STRINGVAL;
 }
