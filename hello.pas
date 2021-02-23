@@ -15,3 +15,4 @@ begin
       writeln('a is not less than 20' );
       writeln('value of a is : ', a);
 end.
+
