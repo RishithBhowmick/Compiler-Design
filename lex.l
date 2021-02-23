@@ -1,6 +1,7 @@
 %{
 	#include<stdio.h>
 	#include<string.h>
+	#include<ctype.h>
 	void yyerror(char *s);
 	#include "y.tab.h" //token declarations from yacc file
 	#include "uthash/src/uthash.h"
@@ -9,6 +10,58 @@
 	yylloc.first_column = yycolumn; yylloc.last_column = yycolumn + yyleng - 1;\
 	yycolumn += yyleng;
 	int linenumber = 0;
+	int power(int n, int exp) {
+		int pow = 1;
+		while(exp > 0) {
+			pow *= n;
+			--exp;
+		}
+		return pow;
+	}
+	double myatof(char s[])
+	{
+		double val,pow;
+		int sign,i,esign,exp;   
+		int power(int base,int exp);    
+			
+		for(i=0;isspace(s[i]);i++)
+			;
+
+		sign=(s[i]=='-')?-1:1;
+
+		if(s[i]=='+' || s[i] == '-')
+			i++;
+
+		for(val=0.0;isdigit(s[i]);i++)
+			val = 10.0 * val + (s[i] - '0');
+		
+		if(s[i]=='.')
+			i++;
+
+		for(pow=1.0;isdigit(s[i]);i++)
+		{
+			val = 10.0 * val + (s[i] - '0');
+			pow *= 10.0;
+		}
+
+		if(s[i]=='e' || s[i] =='E')
+			i++;
+		if(s[i]=='+' || s[i] =='-')
+		{
+			esign=s[i];
+			i++;
+		}
+
+		for(exp=0;isdigit(s[i]);i++)
+			exp=10.0 * exp + (s[i] - '0');
+		
+		if( esign == '-')
+			return sign * (val / pow) / power(10,exp);
+		else
+		
+			return sign * (val / pow) * power(10,exp);
+	}
+
 %}
 %option yylineno
 
@@ -19,13 +72,13 @@ digit	[0-9]
 letter	[a-zA-Z]
 id	({letter}|_)({letter}|{digit}|_)*
 digits	{digit}+
-/*opExponent	([Ee][+-]?{digits})?*/
+/*opExponent	[-+]?{digits}[Ee][+-]?{digits}*/
 single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
 multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
 paranthesis	\(|\)|\[|\]
-floatval [-+]?{digits}(\.{digits})
-intval {digits}
+floatval [-+]?{digits}((\.{digits})|([Ee][-+]?{digits}))
+intval [-+]?{digits}
 boolval true|false
 stringval \'.*\'
 datatypes integer|character|real|boolean|string
@@ -68,7 +121,7 @@ procedure		{  return T_PROCEDURE;}
 }
 
 {floatval} 		{
-	yylval.s.floatval = atof(yytext);
+	yylval.s.floatval = myatof(yytext);
 	yylval.s.type = strdup("float");
 	
 	return T_FLOATVAL;
