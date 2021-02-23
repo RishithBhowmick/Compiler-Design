@@ -1,20 +1,18 @@
-program nested_ifelseChecking;
+program ifelseChecking;
 var
    { local variable definition }
-   a, b : integer;
+   a : integer;
 
 begin
    a := 100;
-   b:= 200;
-   
    (* check the boolean condition *)
-   if (a = 100) then
-      (* if condition is true then check the following *)
-      if ( b = 200 ) then
-         (* if nested if condition is true  then print the following *)
-         writeln('Value of a is 100 and value of b is 200' );
+   if( a < 20 ) then
+      (* if condition is true then print the following *)
+      writeln('a is less than 20' )
    
-   writeln('Exact value of a is: ', a );
-   writeln('Exact value of b is: ', b );
+   else
+      (* if condition is false then print the following *) 
+      writeln('a is not less than 20' );
+      writeln('value of a is : ', a);
 end.
 

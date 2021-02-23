@@ -94,33 +94,32 @@ indextype [0-9]\.\.\.[0-9]+
 <INITIAL>"{"	{BEGIN(IN_SINGLELINE_COMMENT);}
 "}"			{printf("Unmatching comment marks {*\n");
 				yyterminate();}					
-<IN_MULTILINE_COMMENT>"*)"	{BEGIN(INITIAL);}
-<IN_MULTILINE_COMMENT>.	;
-<IN_MULTILINE_COMMENT>[^*\n]*	;
-<IN_MULTILINE_COMMENT>"*"+[^*/\n]*	;
+<IN_MULTILINE_COMMENT>"*)"	{ ; BEGIN(INITIAL);}
+<IN_MULTILINE_COMMENT>[^*\n]+	;
+<IN_MULTILINE_COMMENT>"*"	;
 <IN_MULTILINE_COMMENT>\n	linenumber++;
-<IN_SINGLELINE_COMMENT>"}"	{BEGIN(INITIAL);}
+<IN_SINGLELINE_COMMENT>"}\n"	{BEGIN(INITIAL);}
 <IN_SINGLELINE_COMMENT>.	;
 
 
-program			{   return T_PROGRAM;}
-uses			{  return T_USES;}
-type			{  return T_TYPE;}
-var				{  return T_VAR;}
-begin 			{  return T_BEGIN;}
-end 			{  return T_END;}
-function		{  return T_FUNCTION;}
-procedure		{  return T_PROCEDURE;}
+program			{ ;  return T_PROGRAM;}
+uses			{ ;  return T_USES;}
+type			{ ;  return T_TYPE;}
+var				{ ;  return T_VAR;}
+begin 			{ ;  return T_BEGIN;}
+end 			{ ;  return T_END;}
+function		{ ;  return T_FUNCTION;}
+procedure		{ ;  return T_PROCEDURE;}
 
-{indextype}		{ return T_INDEXTYPE;}
-{intval}		{
+{indextype}		{ ; return T_INDEXTYPE;}
+{intval}		{ ;
 	yylval.s.intval = atoi(yytext);
 	yylval.s.type = strdup("integer");
 	
 	return T_INTVAL;
 }
 
-{floatval} 		{
+{floatval} 		{ ;
 	yylval.s.floatval = myatof(yytext);
 	yylval.s.type = strdup("float");
 	
@@ -128,6 +127,7 @@ procedure		{  return T_PROCEDURE;}
 }
 
 {boolval} 		{
+	 ;
 	if(strcmp(yytext, "true")==0) 
 		yylval.s.intval = 1;
 	else
@@ -138,6 +138,7 @@ procedure		{  return T_PROCEDURE;}
 }
 
 {stringval}		{
+	 ;
 	char temp[yyleng];
 	strncpy(temp, yytext+1, yyleng-2);
 	temp[yyleng-2] = '\0';
@@ -148,30 +149,30 @@ procedure		{  return T_PROCEDURE;}
 	return T_STRINGVAL;
 }
 
-array			{ return T_ARRAY;}
-of 				{ return T_OF;}
-const 			{ return T_CONST;}
-if				{ return T_IF;}
-then 			{ return T_THEN;}
-else			{ return T_ELSE;}
-for				{ return T_FOR;}
-to				{ return T_TO;}
-downto			{ return T_DOWNTO;}
-do				{ return T_DO;}
+array			{ ; return T_ARRAY;}
+of 				{ ; return T_OF;}
+const 			{ ; return T_CONST;}
+if				{ ; return T_IF;}
+then 			{ ; return T_THEN;}
+else			{ ; return T_ELSE;}
+for				{ ; return T_FOR;}
+to				{ ; return T_TO;}
+downto			{ ; return T_DOWNTO;}
+do				{ ; return T_DO;}
 read			;
 readln			;
 readkey			;
-write			{ return T_IDENTIFIER;}
-writeln			{ return T_IDENTIFIER;}
-[\t|' ']+		
+write			{ ; return T_PROCALL;}
+writeln			{ ; return T_PROCALL;}
+[\t|' ']+		;
 
-{datatypes} 	{
+{datatypes} 	{  ;
 	yylval.s.type = strdup(yytext);
 	
 	return T_DATATYPE;
 }
 
-{id} {
+{id} {  ;
 	if(yyleng > 31) {
 		printf("Warning : Identifier Length Greater than 31 characters, Truncating Identifier.\n");
 	}
@@ -183,16 +184,17 @@ writeln			{ return T_IDENTIFIER;}
 }
 
 {single_char_op}   {
-	
+	 ;
 	return yytext[0];
 }
 
 {single_eq}   {
-	
+	 ;
 	return T_SINGLEEQ;
 }
 
 {multiple_char_op}  {
+	 ;
 	if(strcmp(yytext, "and") == 0) {
 		
 		return T_BOOL_AND;
@@ -248,17 +250,17 @@ writeln			{ return T_IDENTIFIER;}
 }
 
 {paranthesis} {
-	
+	 ;
 	return yytext[0];
 }
 
 {punctuation} {
-	
+	 ;
 	return yytext[0];
 }
 
 "\n" {
-	
+	 ;
 	yycolumn = 1;
 	linenumber++;
 }
