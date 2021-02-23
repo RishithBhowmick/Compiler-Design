@@ -179,8 +179,7 @@
 %token T_TO;
 %token T_DOWNTO;
 %token T_DO;
-%token T_WRITE;
-%token T_WRITELN;
+%token T_PROCALL;
 
 %token T_INDEXTYPE;
 
@@ -211,6 +210,11 @@
 %right T_ASOP
 %left '+' '-'
 %left '*' '/'
+
+
+%nonassoc T_IFX
+%nonassoc T_ELSE
+
 %%
 
 // Pascal Program structure
@@ -523,16 +527,26 @@ statementList :
 
 statements :
 		execution_block
-		| assignment_statements 
+		| assignment_statements
         | if_statement
         | fordo_statement
-        | print_statements
+        | procedure_call_statements
         |
         ;
 	
-print_statements:
-		T_WRITELN '(' T_STRINGVAL ')' ';'
-;
+procedure_call_statements:
+		T_PROCALL actuals
+		;
+
+actuals :
+		'(' expressionList ')'
+		|
+		;
+
+expressionList :
+		expression
+		| expression ',' expressionList
+		;
 
 assignment_statements :
         T_IDENTIFIER 
@@ -868,8 +882,8 @@ assignment_operators :
         ;
 
 if_statement :
-        T_IF expression T_THEN statements T_ELSE statements
-		| T_IF expression T_THEN statements
+		T_IF expression T_THEN statements %prec T_IFX
+		| T_IF expression T_THEN statements T_ELSE statements
         ;
 
 fordo_statement :

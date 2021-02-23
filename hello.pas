@@ -1,22 +1,17 @@
-program fcalc;
-uses crt;
-const
-PI=314e-2;
+program ifelseChecking;
 var
-num, i, sum: integer;
-condition: boolean;
-human_name: string;
+   { local variable definition }
+   a : integer;
+
 begin
-num:=5;
-sum:=0;
-human_name:='isima';
-for i:=1 to num do
-begin
-    sum := sum + i;
-end;
-condition := true;
-if (condition = true) then 
-    writeln('"Hello"');
-else
-    writeln('Bye');
+   a := 100;
+   (* check the boolean condition *)
+   if( a < 20 ) then
+      (* if condition is true then print the following *)
+      writeln('a is less than 20' )
+   
+   else
+      (* if condition is false then print the following *) 
+      writeln('a is not less than 20' );
+      writeln('value of a is : ', a);
 end.
