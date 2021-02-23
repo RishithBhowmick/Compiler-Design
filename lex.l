@@ -161,8 +161,8 @@ do				{ return T_DO;}
 read			;
 readln			;
 readkey			;
-write			{ return T_WRITE;}
-writeln			{ return T_WRITELN;}
+write			{ return T_IDENTIFIER;}
+writeln			{ return T_IDENTIFIER;}
 [\t|' ']+		
 
 {datatypes} 	{

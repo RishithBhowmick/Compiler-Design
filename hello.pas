@@ -1,22 +1,20 @@
-program fcalc;
-uses crt;
-const
-PI=314e-2;
+program nested_ifelseChecking;
 var
-num, i, sum: integer;
-condition: boolean;
-human_name: string;
+   { local variable definition }
+   a, b : integer;
+
 begin
-num:=5;
-sum:=0;
-human_name:='isima';
-for i:=1 to num do
-begin
-    sum := sum + i;
-end;
-condition := true;
-if (condition = true) then 
-    writeln('"Hello"');
-else
-    writeln('Bye');
+   a := 100;
+   b:= 200;
+   
+   (* check the boolean condition *)
+   if (a = 100) then
+      (* if condition is true then check the following *)
+      if ( b = 200 ) then
+         (* if nested if condition is true  then print the following *)
+         writeln('Value of a is 100 and value of b is 200' );
+   
+   writeln('Exact value of a is: ', a );
+   writeln('Exact value of b is: ', b );
 end.
+
