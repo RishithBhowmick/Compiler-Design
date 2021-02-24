@@ -465,19 +465,60 @@ param_list:
 		;
 
 function_block:
-		T_FUNCTION T_IDENTIFIER
+		T_FUNCTION T_IDENTIFIER ':' T_DATATYPE ';'   
 		{
 			curr_scope_level = strdup(yylval.s.str);
 			printf("Entering the Function %s\n", curr_scope_level);
+			struct symbol_table *s = NULL;
+			HASH_FIND_STR(SYMBOL_TABLE,$<s.str>2, s);
+			if(!s){
+				s = malloc(sizeof(struct symbol_table));
+				strcpy(s->type,$<s.str>4);
+				s->scope_level = strdup(curr_scope_level);
+				char var_mang_name[31];
+				strcpy(var_mang_name, yylval.s.str);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, s->scope_level);
+				strcpy(s->var_name,var_mang_name);
+				// printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+				s->line_no = yylloc.first_line;
+				s->col_no = yylloc.first_column;
+				HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
+				//printf("yayy\n");
+			}
+			else {
+				printf("BLTHR\n");
+			}
+			
 		}
-		':' T_DATATYPE ';'  block ';' 
+		block ';' 
 		{
 			strcpy(curr_scope_level,"global");
-
 		}
 		| T_FUNCTION T_IDENTIFIER 
 		{
 			curr_scope_level = strdup(yylval.s.str);
+
+			struct symbol_table *s = NULL;
+			HASH_FIND_STR(SYMBOL_TABLE,$<s.str>2, s);
+			if(!s){
+				s = malloc(sizeof(struct symbol_table));
+				strcpy(s->type,"function");
+				s->scope_level = strdup(curr_scope_level);
+				char var_mang_name[31];
+				strcpy(var_mang_name, yylval.s.str);
+				strcat(var_mang_name, "$");
+				strcat(var_mang_name, s->scope_level);
+				strcpy(s->var_name,var_mang_name);
+				// printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+				s->line_no = yylloc.first_line;
+				s->col_no = yylloc.first_column;
+				HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
+				//printf("yayy\n");
+			}
+			else {
+				printf("BLTHR\n");
+			}
 		}
 		'(' function_param_list ')' ':' T_DATATYPE ';'  block ';' 
 		{
