@@ -160,8 +160,8 @@
 	}s;
 }
 
-%nonassoc T_IFX
-%nonassoc T_ELSE
+// %nonassoc T_IFX
+// %nonassoc T_ELSE
 
 %token T_PROGRAM;
 %token <str> T_IDENTIFIER;
