@@ -10,8 +10,7 @@ begin
    r:=2;
    d:=4;
    if color = red then
-   writeln('You have chosen a red car')
-         if color = blue then
+      if color = blue then
             writeln('You have chosen a blue car')
          else
             writeln('Please choose a color for your car');
