@@ -465,7 +465,7 @@ param_list:
 		;
 
 function_block:
-		T_FUNCTION T_IDENTIFIER ':' T_DATATYPE ';'   
+		T_FUNCTION T_IDENTIFIER    
 		{
 			curr_scope_level = strdup(yylval.s.str);
 			printf("Entering the Function %s\n", curr_scope_level);
@@ -473,7 +473,7 @@ function_block:
 			HASH_FIND_STR(SYMBOL_TABLE,$<s.str>2, s);
 			if(!s){
 				s = malloc(sizeof(struct symbol_table));
-				strcpy(s->type,$<s.str>4);
+				strcpy(s->type,"function");
 				s->scope_level = strdup(curr_scope_level);
 				char var_mang_name[31];
 				strcpy(var_mang_name, yylval.s.str);
@@ -491,7 +491,7 @@ function_block:
 			}
 			
 		}
-		block ';' 
+		':' T_DATATYPE ';' block ';' 
 		{
 			strcpy(curr_scope_level,"global");
 		}
