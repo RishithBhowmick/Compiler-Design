@@ -84,6 +84,7 @@ stringval \'.*\'
 datatypes integer|character|real|boolean|string
 punctuation ;|,|:|\.
 indextype [0-9]\.\.\.[0-9]+
+dubdot \.\.
 
 
 %%
@@ -164,6 +165,10 @@ readln			;
 readkey			;
 write			{ ; return T_PROCALL;}
 writeln			{ ; return T_PROCALL;}
+forward			{ ; return T_FORWARD;}
+div				{ ; return T_DIV;}
+mod				{ ; return T_MOD;}
+dubdot 			{ ; return T_DUBDOT;}
 [\t|' ']+		;
 
 {datatypes} 	{  ;
