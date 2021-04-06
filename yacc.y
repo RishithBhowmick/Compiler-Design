@@ -183,7 +183,6 @@
 %token T_TO;
 %token T_DOWNTO;
 %token T_DO;
-%token T_PROCALL;
 
 %token T_INDEXTYPE;
 
@@ -300,9 +299,13 @@ TypeDefinitionList :
         | TypeDef TypeDefinitionList
         ;
 
-// come back here
 TypeDef :
-        T_IDENTIFIER T_SINGLEEQ TypeSpecifier ';'
+        T_IDENTIFIER 
+        {
+            type_identifier_top++;
+			type_identifier_stack[type_identifier_top] = strdup(yylval.s.str);
+        }
+        T_SINGLEEQ TypeSpecifier ';'
         ;
 
 VariableDeclarations :
@@ -464,8 +467,47 @@ Dimension :
         ;
 
 IdList : 
-        T_IDENTIFIER
-        | T_IDENTIFIER ',' IdList
+        T_IDENTIFIER {
+            for(int i = 0; i <= type_identifier_top; i++)
+			{
+				struct type_table *s = NULL;
+				HASH_FIND_STR(TYPE_TABLE, type_identifier_stack[i], s);
+				if(!s)
+				{
+					s = malloc(sizeof(struct type_table));
+					strcpy(s->user_defined_name, type_identifier_stack[i]);
+					strcpy(s->actual_type_name, yylval.s.type);
+					HASH_ADD_STR(TYPE_TABLE, user_defined_name, s);  /* var_name: name of key field */
+				}
+				else
+				{
+					YYABORT;
+				}
+				type_identifier_stack[i] = NULL;
+			}
+			type_identifier_top = -1;
+        }
+        | T_IDENTIFIER 
+        {
+            for(int i = 0; i <= type_identifier_top; i++)
+			{
+				struct type_table *s = NULL;
+				HASH_FIND_STR(TYPE_TABLE, type_identifier_stack[i], s);
+				if(!s)
+				{
+					s = malloc(sizeof(struct type_table));
+					strcpy(s->user_defined_name, type_identifier_stack[i]);
+					strcpy(s->actual_type_name, yylval.s.type);
+					HASH_ADD_STR(TYPE_TABLE, user_defined_name, s);  /* var_name: name of key field */
+				}
+				else
+				{
+					YYABORT;
+				}
+				type_identifier_stack[i] = NULL;
+			}
+			type_identifier_top = -1;
+        } ',' IdList
         ;
 
 constant :

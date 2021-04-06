@@ -163,8 +163,6 @@ do				{ ; return T_DO;}
 read			;
 readln			;
 readkey			;
-write			{ ; return T_PROCALL;}
-writeln			{ ; return T_PROCALL;}
 forward			{ ; return T_FORWARD;}
 div				{ ; return T_DIV;}
 mod				{ ; return T_MOD;}
