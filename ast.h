@@ -8,4 +8,4 @@ node* construct_AST(node*, node*, char*);
 
 void DisplayTree(node* );
 
-void disp(node* ,int)
+void disp(node* ,int);

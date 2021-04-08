@@ -2,10 +2,14 @@
     #include<stdio.h>
     #include<stdlib.h>
     #include<time.h>
+	#include<string.h>
     #include "uthash/src/uthash.h"
     #include "sym_tab.h" 
+	#include "ast.h"
     #define YYPARSE_PARAM scanner
     #define YYLEX_PARAM   scanner
+	#define COUNT 5
+	
     int yylex();
     int yyerror();
     int successful=1;
@@ -145,7 +149,34 @@
 		}
 		return result;
 	}
-        
+     node* construct_AST(node* left, node* right, char* token){
+		node* newnode = (node*)malloc(sizeof(node));
+		char* newstr = (char*)malloc(strlen(token)+1);
+		strcpy(newstr, token);
+		newnode->left = left;
+		newnode->right = right;
+		newnode->token = token;
+		return newnode; 
+	}
+
+	void disp(node* root, int space){
+		if(root == NULL){
+			return;
+		}
+		space += COUNT;
+		disp(root-> right, space);
+		printf("\n");
+		for(int i = COUNT; i < space; i++){
+			printf(" ");
+		}
+		printf("%s\n", root->token);
+		disp(root->left, space);
+	}
+
+	void DisplayTree(node* tree){
+		disp(tree, 0);
+	}
+
 %}
 %locations 
 
@@ -157,6 +188,7 @@
 		int intval;
 		float floatval;
 		char* stringval;
+		struct ast_node* ast;
 	}s;
 }
 
