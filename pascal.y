@@ -197,6 +197,7 @@
 
 %token T_PROGRAM;
 %token <str> T_IDENTIFIER;
+%type <s.intval> term;
 %token T_USES;
 %token T_TYPE;
 %token T_VAR;
@@ -358,6 +359,10 @@ more_const_definition :
 
 type_block :
         T_TYPE type_definition
+		{
+			printf("Type block\n");
+			
+		}
         |
         ;
 
@@ -369,6 +374,11 @@ type_definition :
         }
         more_type_identifiers T_SINGLEEQ T_DATATYPE 
         {
+			char** new_types = (char**)malloc(sizeof(char*)* 10); // where is it used?
+			for(int i = 0; i <= type_identifier_top; i++)
+			{	
+				new_types[i] = strdup(type_identifier_stack[i]);
+			}
             for(int i = 0; i <= type_identifier_top; i++)
 			{
 				struct type_table *s = NULL;
@@ -386,11 +396,12 @@ type_definition :
 				}
 				type_identifier_stack[i] = NULL;
 			}
+			//some struct
 			type_identifier_top = -1;
         }
         ';' type_definition
         | error ';'
-		|
+		|	
         ;
 
 more_type_identifiers :
@@ -405,10 +416,14 @@ more_type_identifiers :
 
 variable_block :
         T_VAR decl_stmts
+		{
+			printf("Variable block\n");
+			//$$ = $2;
+		}
         |
         ;
 
-// here symbol table stuff will come
+// here symbol table stuff will come ?
 decl_stmts :
         T_IDENTIFIER
         {
@@ -743,7 +758,7 @@ simpleExpression :
 
 term :
 		factor 
-		| term '*' factor
+		| term '*' factor	{$<s.intval>$ = $1 * $3;}
 		| term '/' factor
 		| term '%' factor
 		| term T_BOOL_AND factor
@@ -791,10 +806,10 @@ term :
 
 factor :
 		'(' expression ')'
-		| '+' factor
+		| '+' factor 	{$$ = $2;}
 		| '-' factor
 		| T_BOOL_NOT factor
-		| value
+		| value // {	$$ = $2}
 		| T_IDENTIFIER
 		{
 			if(check_valid_identifier(yyval.s.str)) {
@@ -838,7 +853,7 @@ value :
 					// printf("---------------\n");
 				}
 			}
-            
+            $<s.intval>$ = S1;
         }
         | T_FLOATVAL
         {
@@ -875,6 +890,7 @@ value :
 					// printf("---------------\n");
 				}
 			}
+			$<s.floatval>$ = $1;
         }
         | T_BOOLVAL
         {
@@ -946,6 +962,7 @@ value :
 					// printf("---------------\n");
 				}
 			}
+			$<s.stringval>$ = $1;
         }
         ;
 
