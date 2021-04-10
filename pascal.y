@@ -13,7 +13,7 @@
     int yylex();
     int yyerror();
     int successful=1;
-
+	int is_rel_op = 0;
     extern FILE *yyin;
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
@@ -188,7 +188,7 @@
 		int intval;
 		float floatval;
 		char* stringval;
-		struct ast_node* ast;
+		//struct ast_node* ast;
 	}s;
 }
 
@@ -196,8 +196,10 @@
 // %nonassoc T_ELSE
 
 %token T_PROGRAM;
-%token <str> T_IDENTIFIER;
-%type <s.intval> term;
+%token <s.str> T_IDENTIFIER;
+//%type <s.intval> value;
+//%type <s.floatval> factor;
+//%type <s.intval> term;
 %token T_USES;
 %token T_TYPE;
 %token T_VAR;
@@ -216,16 +218,14 @@
 %token T_DOWNTO;
 %token T_DO;
 %token T_PROCALL;
-
 %token T_INDEXTYPE;
-
 %token T_SINGLEEQ;
 
-%token <intval> T_INTVAL;
-%token <intval> T_BOOLVAL;
-%token <floatval> T_FLOATVAL;
-%token <str> T_STRINGVAL;
-%token <type> T_DATATYPE;
+%token <s.intval> T_INTVAL;
+%token <s.intval> T_BOOLVAL;
+%token <s.floatval> T_FLOATVAL;
+%token <s.str> T_STRINGVAL;
+%token <s.type> T_DATATYPE;
 
 %token T_ASOP;
 %token T_AS_PE;
@@ -758,7 +758,7 @@ simpleExpression :
 
 term :
 		factor 
-		| term '*' factor	{$<s.intval>$ = $1 * $3;}
+		| term '*' factor	//{$<s.intval>$ = $1 * $3;}
 		| term '/' factor
 		| term '%' factor
 		| term T_BOOL_AND factor
@@ -805,16 +805,16 @@ term :
 		;
 
 factor :
-		'(' expression ')'
-		| '+' factor 	{$$ = $2;}
+		'(' expression ')'	{$<s.intval>$ = $<s.intval>2}
+		| '+' factor 	//{$$ = $2;}
 		| '-' factor
 		| T_BOOL_NOT factor
-		| value // {	$$ = $2}
-		| T_IDENTIFIER
+		| value  	//{	printf("%d\n", $1);}
+		| T_IDENTIFIER {$<s.str>$ = $1;}
 		{
 			if(check_valid_identifier(yyval.s.str)) {
 				union data variable_value = get_identifier_data(yylval.s.str);
-				$<s.intval>$ = variable_value.int_value;
+				//$<s.intval>$ = variable_value.int_value;
 			}
         }
 
@@ -853,7 +853,8 @@ value :
 					// printf("---------------\n");
 				}
 			}
-            $<s.intval>$ = S1;
+			$<s.intval>$ = $1;
+			printf("%d\n", $$);
         }
         | T_FLOATVAL
         {
@@ -891,6 +892,7 @@ value :
 				}
 			}
 			$<s.floatval>$ = $1;
+			//printf("%f\n", $1);
         }
         | T_BOOLVAL
         {
@@ -927,6 +929,8 @@ value :
 					// printf("---------------\n");
 				}
 			}
+			$<s.intval>$ = $1;
+			//printf("%d\n", $1);
         }
         | T_STRINGVAL
         {
@@ -962,7 +966,8 @@ value :
 					// printf("---------------\n");
 				}
 			}
-			$<s.stringval>$ = $1;
+			$<s.str>$ = $1;
+			//printf("%s\n", $1);
         }
         ;
 
