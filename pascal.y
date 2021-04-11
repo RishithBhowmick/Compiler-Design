@@ -49,7 +49,7 @@
 	};
 	struct const_table* CONST_TABLE = NULL;
 	struct type_table *TYPE_TABLE = NULL;
-
+	struct ast_node *tree;
 	int dump_stack_in_symbol_table(char *type, int line_no, int col_no) {
 		for(int i = 0; i <= var_name_stack_top; i++) {
 			struct symbol_table *s = NULL;
@@ -83,6 +83,7 @@
 				else if(strcmp(type,"array")==0){
 					strcpy(s->var_value.string_value, "00000x54");
 				}
+				printf("%s %s\n",s->type,s->var_name);
 				HASH_ADD_STR( SYMBOL_TABLE, var_name, s );  /* var_name: name of key field */
 				//SYMBOL_TABLE->current_size++;
 			}
@@ -242,6 +243,10 @@
 %token T_BOOL_NOT;
 %token T_BIT_LEFT_SHIFT;
 %token T_BIT_RIGHT_SHIFT;
+%token T_FORWARD;
+%token T_DIV;
+%token T_MOD;
+%token T_DUBDOT;
 
 %right T_ASOP
 %left '+' '-'
@@ -264,16 +269,21 @@
 
 
 startProg :
-		program
+		program { tree = $<s.ast>1; }
 		;
 
 program :
-        programHeading block '.'
+        programHeading block '.' 
+		{ 
+			//$<s.ast>$ = new_ast_root_node($<s.ast>1,$<s.ast>2);
+		}
 		| error '.'
         ;
 
 programHeading :
-        T_PROGRAM T_IDENTIFIER ';'
+        T_PROGRAM T_IDENTIFIER ';'  {
+			printf("%s\n",$<s.str>2);
+			}
         ;
 
 // just | followed by ; is for lambda
@@ -396,8 +406,11 @@ type_definition :
 				}
 				type_identifier_stack[i] = NULL;
 			}
+<<<<<<< HEAD
 			//some struct
 			type_identifier_top = -1;
+=======
+>>>>>>> Initial 3ac for variable declarations
         }
         ';' type_definition
         | error ';'
@@ -412,6 +425,8 @@ more_type_identifiers :
         }
         more_type_identifiers
         |
+		{
+		}
         ;
 
 variable_block :
@@ -440,7 +455,7 @@ more_decl_stmt :
         {
             var_name_stack_top++;
 			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
-        } 
+		} 
         more_decl_stmt
         |
         ;
@@ -458,8 +473,7 @@ data_type :
         T_IDENTIFIER
         {
             struct type_table *t = NULL;
-			HASH_FIND_STR(TYPE_TABLE,yylval.s.str,t);
-
+			HASH_FIND_STR(TYPE_TABLE,yylval.s.str,t);		
 			if(t)
 			{
 				int result = dump_stack_in_symbol_table(t->actual_type_name, yylloc.first_line, yylloc.first_column);
@@ -661,7 +675,18 @@ assignment_statements :
 
 expression :
         simpleExpression
+		{
+			$<s.type>$ = $<s.type>1;
+			$<s.intval>$ = $<s.intval>1;	
+			$<s.floatval>$ = $<s.floatval>1;	
+			$<s.stringval>$ = $<s.stringval>1;	
+			
+			printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
+		}
         | simpleExpression T_SINGLEEQ simpleExpression
+		{
+			printf(" = %s  %s",$<s.str>0,$<s.str>1);
+		}	
 		| simpleExpression T_NE simpleExpression
 		| simpleExpression '<' simpleExpression
 		| simpleExpression T_LE simpleExpression
