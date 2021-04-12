@@ -280,6 +280,30 @@ def dead_code_elimination(code):
         print(bb)
     return opt_basic_blocks
 
+
+def local_value_numbering(basic_block):
+    # table = mapping from value tuples to avoid canonical variables, with each row numbered
+    # var2num = mapping from variable names to their current row in the table
+    # for instr in basic_block.instructions:
+    #    value = (instr.op, var2num[instr.args[0]], ...)
+    #    if value in table:
+    #        // reuse the value that has been computed before
+    #        num, var = table[value]
+    #        replace instr with copy of var
+    #    else:
+    #        num = fresh value number
+    #        dest = instr.dest
+    #        if instr.dest will be overwritten later:
+    #            dest = fresh variable name
+    #            instr.dest = dest
+    #        else:
+    #            dest = instr.dest
+    #        table[value] = num, dest
+    #        for a in instr.args:
+    #            replace a with table[var2num[a]].var
+    #    var2num[instr.dest] = num
+
+
 def common_sub_exp_elimination(code):
     return code
 
