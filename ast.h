@@ -2,7 +2,7 @@ typedef struct ast_node{
 	char* token;
 	struct ast_node* left;
 	struct ast_node* right;
-};
+}ast_node;
 
 struct ast_root{
 	int node_type;

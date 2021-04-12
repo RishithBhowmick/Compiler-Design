@@ -17,10 +17,9 @@
     extern FILE *yyin;
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
-    
+	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
-
 	char *assignment_name_stack[31];
 	int assignment_name_stack_top = -1;
 	
@@ -83,7 +82,7 @@
 				else if(strcmp(type,"array")==0){
 					strcpy(s->var_value.string_value, "00000x54");
 				}
-				printf("%s %s\n",s->type,s->var_name);
+				fprintf(fptr,"%s %s\n",s->type,s->var_name);
 				HASH_ADD_STR( SYMBOL_TABLE, var_name, s );  /* var_name: name of key field */
 				//SYMBOL_TABLE->current_size++;
 			}
@@ -150,34 +149,42 @@
 		}
 		return result;
 	}
-     node* construct_AST(node* left, node* right, char* token){
-		node* newnode = (node*)malloc(sizeof(node));
-		char* newstr = (char*)malloc(strlen(token)+1);
-		strcpy(newstr, token);
-		newnode->left = left;
-		newnode->right = right;
-		newnode->token = token;
-		return newnode; 
-	}
+    //  node* construct_AST(node* left, node* right, char* token){
+	// 	node* newnode = (node*)malloc(sizeof(node));
+	// 	char* newstr = (char*)malloc(strlen(token)+1);
+	// 	strcpy(newstr, token);
+	// 	newnode->left = left;
+	// 	newnode->right = right;
+	// 	newnode->token = token;
+	// 	return newnode; 
+	// }
 
-	void disp(node* root, int space){
-		if(root == NULL){
-			return;
-		}
-		space += COUNT;
-		disp(root-> right, space);
-		printf("\n");
-		for(int i = COUNT; i < space; i++){
-			printf(" ");
-		}
-		printf("%s\n", root->token);
-		disp(root->left, space);
-	}
+	// void disp(node* root, int space){
+	// 	if(root == NULL){
+	// 		return;
+	// 	}
+	// 	space += COUNT;
+	// 	disp(root-> right, space);
+	// 	printf("\n");
+	// 	for(int i = COUNT; i < space; i++){
+	// 		printf(" ");
+	// 	}
+	// 	printf("%s\n", root->token);
+	// 	disp(root->left, space);
+	// }
 
-	void DisplayTree(node* tree){
-		disp(tree, 0);
-	}
-
+	// void DisplayTree(node* tree){
+	// 	disp(tree, 0);
+	// }
+	typedef struct quadruples
+		{
+			char *op;
+			char *arg1;
+			char *arg2;
+			char *res;
+		}quad;
+		int quadlen = 0;
+		quad q[100];
 %}
 %locations 
 
@@ -189,7 +196,7 @@
 		int intval;
 		float floatval;
 		char* stringval;
-		//struct ast_node* ast;
+		// struct ast_node* ast;
 	}s;
 }
 
@@ -269,7 +276,7 @@
 
 
 startProg :
-		program { tree = $<s.ast>1; }
+		program
 		;
 
 program :
@@ -283,6 +290,8 @@ program :
 programHeading :
         T_PROGRAM T_IDENTIFIER ';'  {
 			printf("%s\n",$<s.str>2);
+			char* filename = strcat($<s.str>2,".tac");
+			fptr = fopen(filename,"w");
 			}
         ;
 
@@ -335,9 +344,16 @@ const_definition :
 			s->col_no = yylloc.first_column;
 			if(yylval.s.intval!=0){
 				s->var_value.int_value = $<s.intval>3;
+				fprintf(fptr,"%s %d\n",yylval.s.str,yylval.s.intval);
+				// printf("%s = %d",s->var_name,s->var_value.intval);
 			}
-			if(yylval.s.floatval!=0){
+			if(yylval.s.floatval!=0){				
 				s->var_value.float_value = $<s.floatval>3;
+				fprintf(fptr,"%s %f\n",yylval.s.str,yylval.s.floatval);
+				// printf("%s = %f",s->var_name,s->var_value.intval);
+			}
+			if (yylval.s.stringval != NULL){
+				fprintf(fptr,"%s %s\n",yylval.s.str,yylval.s.stringval);
 			}
 
 			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
@@ -406,11 +422,8 @@ type_definition :
 				}
 				type_identifier_stack[i] = NULL;
 			}
-<<<<<<< HEAD
 			//some struct
 			type_identifier_top = -1;
-=======
->>>>>>> Initial 3ac for variable declarations
         }
         ';' type_definition
         | error ';'
@@ -830,7 +843,7 @@ term :
 		;
 
 factor :
-		'(' expression ')'	{$<s.intval>$ = $<s.intval>2}
+		'(' expression ')'	{$<s.intval>$ = $<s.intval>2;}
 		| '+' factor 	//{$$ = $2;}
 		| '-' factor
 		| T_BOOL_NOT factor
@@ -878,8 +891,8 @@ value :
 					// printf("---------------\n");
 				}
 			}
-			$<s.intval>$ = $1;
-			printf("%d\n", $$);
+			// $<s.intval>$ = $1;
+			// printf("%d\n", $$);
         }
         | T_FLOATVAL
         {
@@ -1093,7 +1106,7 @@ int main(int argc,char* argv[]) {
 				}
 
 	    }
-
+	fclose(fptr);
 	}
 	else {
 		printf("\033[0;37m");
