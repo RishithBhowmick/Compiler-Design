@@ -46,6 +46,17 @@
 		union data var_value;
 		UT_hash_handle hh;
 	};
+	
+	#define MAX_TYPE 20
+
+	struct type_node_info {
+		char **new_types;
+		int type_identifier_top;
+		char *actual_type;
+	};
+
+	struct type_node_info type_node_stack[20];
+	int type_node_stack_top = -1;
 	struct const_table* CONST_TABLE = NULL;
 	struct type_table *TYPE_TABLE = NULL;
 	struct ast_node *tree;
@@ -176,6 +187,7 @@
 	// void DisplayTree(node* tree){
 	// 	disp(tree, 0);
 	// }
+	//3ac
 	typedef struct quadruples
 		{
 			char *op;
@@ -313,11 +325,7 @@ uses_block :
         ;
 
 other_libs :
-        ',' T_IDENTIFIER other_libs {
-                // uses_identifier_top++;
-		// uses_identifier_stack[uses_identifier_top] = strdup(yylval.s.str);
-                // might need to edit so I'm leaving this one as well 
-        }
+        ',' T_IDENTIFIER other_libs
         |
         ;
 
@@ -422,7 +430,11 @@ type_definition :
 				}
 				type_identifier_stack[i] = NULL;
 			}
-			//some struct
+			struct type_node_info new_type_entry;
+			new_type_entry.new_types = new_types;
+			new_type_entry.type_identifier_top = type_identifier_top;
+			new_type_entry.actual_type = yylval.s.type;
+			type_node_stack[++type_node_stack_top] = new_type_entry;
 			type_identifier_top = -1;
         }
         ';' type_definition
@@ -476,6 +488,7 @@ more_decl_stmt :
 data_type :
         T_DATATYPE
         {
+
 			int result = dump_stack_in_symbol_table(yylval.s.type, yylloc.first_line, yylloc.first_column);
 			if(!result){
 					yyerror("Variable already declared.");
@@ -848,7 +861,7 @@ factor :
 		| '-' factor
 		| T_BOOL_NOT factor
 		| value  	//{	printf("%d\n", $1);}
-		| T_IDENTIFIER {$<s.str>$ = $1;}
+		| T_IDENTIFIER 
 		{
 			if(check_valid_identifier(yyval.s.str)) {
 				union data variable_value = get_identifier_data(yylval.s.str);
