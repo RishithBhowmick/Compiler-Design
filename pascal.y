@@ -6,6 +6,7 @@
     #include "uthash/src/uthash.h"
     #include "sym_tab.h" 
 	#include "ast.h"
+	#include "icg.h"
     #define YYPARSE_PARAM scanner
     #define YYLEX_PARAM   scanner
 	#define COUNT 5
@@ -17,6 +18,7 @@
     extern FILE *yyin;
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
+	void check_types(char* op1, char* op2);
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
@@ -187,16 +189,8 @@
 	// void DisplayTree(node* tree){
 	// 	disp(tree, 0);
 	// }
-	//3ac
-	typedef struct quadruples
-		{
-			char *op;
-			char *arg1;
-			char *arg2;
-			char *res;
-		}quad;
-		int quadlen = 0;
-		quad q[100];
+	int quadlen = 0;
+	quad q[100];	// declation of quadruples
 %}
 %locations 
 
@@ -696,18 +690,18 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression
+        assignment_operators expression{}
         ;
 
 expression :
         simpleExpression
 		{
-			$<s.type>$ = $<s.type>1;
-			$<s.intval>$ = $<s.intval>1;	
-			$<s.floatval>$ = $<s.floatval>1;	
-			$<s.stringval>$ = $<s.stringval>1;	
+			// $<s.type>$ = $<s.type>1;
+			// $<s.intval>$ = $<s.intval>1;	
+			// $<s.floatval>$ = $<s.floatval>1;	
+			// $<s.stringval>$ = $<s.stringval>1;	
 			
-			printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
+			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
 		}
         | simpleExpression T_SINGLEEQ simpleExpression
 		{
@@ -809,7 +803,13 @@ simpleExpression :
 
 term :
 		factor 
-		| term '*' factor	//{$<s.intval>$ = $1 * $3;}
+		| term '*' factor	
+		{
+			printf("%s %s\n",$<s.type>1,$<s.type>3);
+			printf("%s %s\n",$<s.str>1,$<s.str>3);
+			check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));
+
+		}
 		| term '/' factor
 		| term '%' factor
 		| term T_BOOL_AND factor
@@ -857,7 +857,14 @@ term :
 
 factor :
 		'(' expression ')'	{$<s.intval>$ = $<s.intval>2;}
-		| '+' factor 	//{$$ = $2;}
+		| '+' factor 	
+		{
+			printf("near 850 asterisk\n");
+			printf("%s %s\n",$<s.type>2,$<s.str>2);
+			// printf("%s %s\n",$<s.str>$,$<s.str>3);
+			// printf("%s %s\n",$<s.stringval>$,$<s.stringval>3);
+			// check_types($<s.str>1,$<s.str>3);
+		}
 		| '-' factor
 		| T_BOOL_NOT factor
 		| value  	//{	printf("%d\n", $1);}
@@ -1036,7 +1043,12 @@ if_statement :
         ;
 
 fordo_statement :
-        T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression T_DO statements
+        T_FOR T_IDENTIFIER T_ASOP expression{
+			for1();
+		} to_or_downto expression
+		{
+			for2(); //
+		} T_DO statements
         ;
 
 to_or_downto :
@@ -1054,6 +1066,19 @@ int yyerror(const char *message) {
 	return 0;
 }
 
+char st[100][100];
+
+char i_[2]="0";
+int temp_i=0;
+char tmp_i[3];
+char temp[2]="t";
+int label[20];
+int lnum=0;
+int ltop=0;
+int abcd=0;
+int l_while=0;
+int l_for=0;
+int flag_set = 1;
 int main(int argc,char* argv[]) {
 	struct timespec start;
 	struct timespec end;
@@ -1119,7 +1144,14 @@ int main(int argc,char* argv[]) {
 				}
 
 	    }
-	fclose(fptr);
+		printf("---------------------Quadruples-------------------------\n\n");
+		printf("Operator \t Arg1 \t\t Arg2 \t\t Result \n");
+		int i;
+		for(i=0;i<quadlen;i++)
+		{
+        printf("%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
+		}
+		fclose(fptr);
 	}
 	else {
 		printf("\033[0;37m");
@@ -1133,4 +1165,81 @@ double time_elapsed(struct timespec *start, struct timespec *end) {
 	t = (end->tv_sec - start->tv_sec); // diff in seconds
 	t += (end->tv_nsec - start->tv_nsec) * 0.000000001; //diff in nanoseconds
 	return t;
+}
+
+void check_types(char* op1, char* op2)
+{
+		printf("\033[0;37m");
+		printf("\n\nSymbol Table in function, Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
+
+		struct symbol_table *s;
+		int i=0;
+	    for(s=SYMBOL_TABLE,i=0; s != NULL,i<HASH_COUNT(SYMBOL_TABLE); s=s->hh.next,i++) {
+
+	    	if(strcmp(s->type,"string")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+				else if(strcmp(s->type,"integer")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else if(strcmp(s->type,"float")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
+				}
+				else if(strcmp(s->type,"boolean")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else {
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+
+	    }
+	struct symbol_table *s1 = NULL;	
+	struct symbol_table *s2 = NULL;	
+	HASH_FIND_STR(SYMBOL_TABLE, op1, s1);
+	HASH_FIND_STR(SYMBOL_TABLE, op2, s2);
+	// check if both symbols are present in the symbol table
+	// printf("%s %s",s1->type,s2->type);
+	if (s1 && s2){
+		// printf("%s %s",s1->type,s2->type);
+		if (strcmp(s1->type, s2->type) !=0)
+		{
+		
+
+			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"integer")==0){
+				printf("Adding 2 integers\n");
+				
+			}
+
+			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"float")==0){
+				printf("Adding 2 integers, typecasting 1st number\n");
+				
+			}
+
+			if (strcmp(s1->type,"float")==0 && strcmp(s2->type,"integer")==0){
+				printf("Adding 2 integers, typecasting 2st number\n");
+				
+			}
+			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"bool")==0) || (strcmp(s1->type,"bool")==0 && strcmp(s2->type,"int")==0) ){
+				// printf("Adding 2 integers, typecasting 2st number\n");
+				// printf("Cannot add int and boolean, aborting\n");	
+				yyerror("Cannot add int and boolean, aborting\n\n");	
+			}
+			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"string")==0) || (strcmp(s1->type,"string")==0 && strcmp(s2->type,"int")==0) ){
+				// printf("Adding 2 integers, typecasting 2st number\n");
+				// printf("Cannot add int and boolean, aborting\n");	
+				yyerror("Cannot add int and string, aborting\n\n");	
+			}
+
+
+			}
+		else{
+			printf("Valid as they are the same types\n");
+		}
+	}
+	
+}
+
+push()
+{
+	strcpy(st[++top],yytext);
 }
