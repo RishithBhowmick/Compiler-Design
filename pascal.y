@@ -1088,7 +1088,7 @@ char st[100][100];
 char i_[2]="0";
 int temp_i=0;
 char tmp_i[3];
-char temp[5]="t";
+char temp[3]="t";
 int label[20];
 int lnum=0;
 int ltop=0;
