@@ -1289,6 +1289,7 @@ void codegen()
     strcpy(q[quadlen].res,temp);
     quadlen++;
     top-=2;
+	//printf("codegen%s\n",st[top]);
     strcpy(st[top],temp);
 	//printf("codegen%s\n",temp);
 temp_i++;
@@ -1340,7 +1341,9 @@ void for2()
     strcpy(q[quadlen].arg1,temp);
     char x[10];
     sprintf(x,"%d",lnum);
-    char l[]="L";
+    char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 
@@ -1355,7 +1358,9 @@ void for2()
     strcpy(q[quadlen].op,"goto");
     char x1[10];
     sprintf(x1,"%d",lnum);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(x1)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,x1));
     quadlen++;
     label[++ltop]=lnum;
@@ -1367,12 +1372,15 @@ void for2()
     strcpy(q[quadlen].op,"Label");
     char x2[10];
     sprintf(x2,"%d",lnum);
-    char l2[]="L";
+    char* l2 = (char*) malloc((strlen(x2)+2)*sizeof(char));
+	l2[0] = 'L';
+	l2[1] = '\0';
     strcpy(q[quadlen].res,strcat(l2,x2));
     quadlen++;
  }
 void for3(char* id)
 {
+	push_symbol(id);
 	push_symbol("=");
 	push_symbol(id);
 	push_symbol("+");
@@ -1390,7 +1398,9 @@ void for3(char* id)
     strcpy(q[quadlen].op,"goto");
     char jug[10];
     sprintf(jug,"%d",l_for);
-    char l[]="L";
+    char* l = (char*) malloc((strlen(jug)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,jug));
     quadlen++;
 
@@ -1404,7 +1414,9 @@ void for3(char* id)
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
 
@@ -1423,7 +1435,9 @@ void for4()
     strcpy(q[quadlen].op,"goto");
     char jug[10];
     sprintf(jug,"%d",lnum);
-    char l[]="L";
+    char* l = (char*) malloc((strlen(jug)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,jug));
     quadlen++;
 
@@ -1436,7 +1450,9 @@ void for4()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
 }
