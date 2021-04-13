@@ -1064,7 +1064,7 @@ fordo_statement :
         T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression
 		{
 			int res = for1();
-			int res = for2();
+			int res1 = for2();
 			// for2(); //
 		} T_DO statements
 		{
@@ -1379,7 +1379,7 @@ int for3()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
 	l1[0] = 'L';
 	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
@@ -1414,7 +1414,7 @@ int for4()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
 	l1[0] = 'L';
 	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
@@ -1494,7 +1494,7 @@ int ifelse2()
 
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
 	l1[0] = 'L';
 	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
