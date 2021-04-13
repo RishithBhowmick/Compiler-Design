@@ -400,7 +400,7 @@ more_const_definition :
 type_block :
         T_TYPE type_definition
 		{
-			printf("Type block\n");
+			//printf("Type block\n");
 			
 		}
         |
@@ -657,14 +657,14 @@ execution_block :
         ;
 
 statementList :
-		statements
+		statements	
 		| statements ';' statementList
 		| error ';' 
 		;
 
 statements :
 		execution_block
-		| assignment_statements
+		| assignment_statements	
         | if_statement
         | fordo_statement
         | procedure_call_statements
@@ -702,13 +702,12 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression{}
+        assignment_operators expression
         ;
 
 expression :
         simpleExpression
 		{
-			
 			// $<s.type>$ = $<s.type>1;
 			// $<s.intval>$ = $<s.intval>1;	
 			// $<s.floatval>$ = $<s.floatval>1;	
@@ -767,8 +766,8 @@ expression :
         ;
 
 simpleExpression :
-		term	
-		| simpleExpression '+' term
+		term
+		| simpleExpression '+' term 
 		| simpleExpression '-' term
 		| simpleExpression T_BOOL_OR term
 		| simpleExpression '|' term
@@ -780,8 +779,8 @@ simpleExpression :
 			else 
             {    
 				// not sure what this is so I left      
-				printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
-				$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
+				//printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+				//$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 				
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -815,7 +814,7 @@ simpleExpression :
 		;
 
 term :
-		factor 
+		factor	 
 		| term '*' factor	
 		{
 			printf("%s %s\n",$<s.type>1,$<s.type>3);
@@ -880,7 +879,7 @@ factor :
 		}
 		| '-' factor
 		| T_BOOL_NOT factor
-		| value  	
+		| value  
 		| T_IDENTIFIER 
 		{
 			if(check_valid_identifier(yyval.s.str)) {
@@ -930,6 +929,7 @@ value :
         }
         | T_FLOATVAL
         {
+			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
@@ -964,11 +964,11 @@ value :
 				}
 			}
 			$<s.floatval>$ = $1;
-			printf("float\n");
 			//printf("%f\n", $1);
         }
         | T_BOOLVAL
         {
+			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
@@ -1007,6 +1007,7 @@ value :
         }
         | T_STRINGVAL
         {
+			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
@@ -1039,7 +1040,6 @@ value :
 					// printf("---------------\n");
 				}
 			}
-			printf("string\n");
 			$<s.str>$ = $1;
 			//printf("%s\n", $1);
         }
@@ -1066,7 +1066,7 @@ fordo_statement :
 			for3($<s.str>2);
 		} T_DO statements
 		{
-			// for4();
+			for4();
 		}
 to_or_downto :
         T_TO {push_symbol("<");}
