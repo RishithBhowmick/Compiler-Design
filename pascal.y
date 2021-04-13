@@ -20,17 +20,17 @@
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
 	void check_types(char* op1, char* op2);
-	void push();
-	void for1();
-	void for2();
-	void for3();
-	void for4();
-	void ifelse1();
-	void if1();
-	void ifelse2();
-	void ifelse3();
-	void if3();
-	void codegen_assign();
+	int push();
+	int for1();
+	int for2();
+	int for3();
+	int for4();
+	int ifelse1();
+	int if1();
+	int ifelse2();
+	int ifelse3();
+	int if3();
+	int codegen_assign();
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
@@ -699,7 +699,7 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression{}
+        assignment_operators expression
         ;
 
 expression :
@@ -711,11 +711,20 @@ expression :
 			// $<s.stringval>$ = $<s.stringval>1;	
 			
 			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
+			int res = push();
 		}
-        | simpleExpression{push();} T_SINGLEEQ{push();} simpleExpression{codegen_assign();}
+        | simpleExpression
 		{
-			printf(" = %s  %s",$<s.str>0,$<s.str>1);
-		}	
+			int res = push();
+		}
+		 T_SINGLEEQ
+		 {
+			int res = push();
+		}
+		  simpleExpression
+		  {
+			  int res = codegen_assign();
+		  }	
 		| simpleExpression T_NE simpleExpression
 		| simpleExpression '<' simpleExpression
 		| simpleExpression T_LE simpleExpression
@@ -1047,15 +1056,15 @@ assignment_operators :
         ;
 
 if_statement :
-		T_IF expression {if1();} T_THEN statements {if3();}%prec T_IFX 
-		| T_IF expression{ifelse1();} T_THEN statements {ifelse2();} T_ELSE statements {ifelse3();}
+		T_IF expression T_THEN statements %prec T_IFX 
+		| T_IF expression T_THEN statements  T_ELSE statements
         ;
 
 fordo_statement :
         T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression
 		{
-			for1();
-			for2(); //
+			int res = for1();
+			// for2(); //
 		} T_DO statements
 		{
 			// for4();
@@ -1247,23 +1256,30 @@ void check_types(char* op1, char* op2)
 	
 }
 
-void push()
+int push()
 {
 	strcpy(st[++top],yylval.s.str);
+	return 0;
 }
 
-void for1()
+int for1()
 {
     l_for = lnum;	
     printf("L%d: \n",lnum++);
     q[quadlen].op = (char*)malloc(sizeof(char)*6);
     q[quadlen].arg1 = NULL;
     q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
+    // q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
     strcpy(q[quadlen].op,"Label");
     char x[10];
     sprintf(x,"%d",lnum-1);
-    char l[]="L";
+    printf("X is %s\n",x);
+	char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
+	// int length = (int)(sizeof(l)/sizeof(l[0])+sizeof(x)/sizeof(x[0]));
+	// printf("Length is %d",length);
+	q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 	int i=0;
@@ -1271,9 +1287,10 @@ void for1()
 		{
         printf("%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
 	}
+	return 0;
 }
 
-void for2()
+int for2()
 {
     strcpy(temp,"T");
     sprintf(tmp_i, "%d", temp_i);
@@ -1326,8 +1343,9 @@ void for2()
     char l2[]="L";
     strcpy(q[quadlen].res,strcat(l2,x2));
     quadlen++;
+	return 0;
  }
-void for3()
+int for3()
 {
     int x;
     x=label[ltop--];
@@ -1357,10 +1375,11 @@ void for3()
     char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
+	return 0;
 
 }
 
-void for4()
+int for4()
 {
     int x;
     x=label[ltop--];
@@ -1389,9 +1408,10 @@ void for4()
     char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
+	return 0;
 }
 
-void codegen_assign()
+int codegen_assign()
 {
     printf("%s = %s\n",st[top-3],st[top]);
     q[quadlen].op = (char*)malloc(sizeof(char));
@@ -1403,9 +1423,10 @@ void codegen_assign()
     strcpy(q[quadlen].res,st[top-3]);
     quadlen++;
     top-=2;
+	return 0;
 }
 
-void ifelse1()
+int ifelse1()
 {
     lnum++;
     strcpy(temp,"T");
@@ -1434,9 +1455,10 @@ void ifelse1()
     quadlen++;
     temp_i++;
     label[++ltop]=lnum;
+	return 0;
 }
 
-void ifelse2()
+int ifelse2()
 {
     int x;
     lnum++;
@@ -1465,10 +1487,11 @@ void ifelse2()
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
     label[++ltop]=lnum;
+	return 0;
 }
 
 
-void ifelse3()
+int ifelse3()
 {
 int y;
 y=label[ltop--];
@@ -1484,9 +1507,10 @@ q[quadlen].op = (char*)malloc(sizeof(char)*6);
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 lnum++;
+return 0;
 }
 
-void if1()
+int if1()
 {
  lnum++;
  strcpy(temp,"T");
@@ -1516,9 +1540,10 @@ void if1()
 
  temp_i++;
  label[++ltop]=lnum;
+ return 0;
 }
 
-void if3()
+int if3()
 {
     int y;
     y=label[ltop--];
@@ -1533,4 +1558,5 @@ void if3()
     char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
+	return 0;
 }
