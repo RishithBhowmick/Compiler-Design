@@ -1064,6 +1064,7 @@ fordo_statement :
         T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression
 		{
 			int res = for1();
+			int res = for2();
 			// for2(); //
 		} T_DO statements
 		{
@@ -1313,7 +1314,9 @@ int for2()
     strcpy(q[quadlen].arg1,temp);
     char x[10];
     sprintf(x,"%d",lnum);
-    char l[]="L";
+    char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 
@@ -1328,7 +1331,9 @@ int for2()
     strcpy(q[quadlen].op,"goto");
     char x1[10];
     sprintf(x1,"%d",lnum);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(x1)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,x1));
     quadlen++;
     label[++ltop]=lnum;
@@ -1340,7 +1345,9 @@ int for2()
     strcpy(q[quadlen].op,"Label");
     char x2[10];
     sprintf(x2,"%d",lnum);
-    char l2[]="L";
+    char* l2 = (char*) malloc((strlen(x2)+2)*sizeof(char));
+	l2[0] = 'L';
+	l2[1] = '\0';
     strcpy(q[quadlen].res,strcat(l2,x2));
     quadlen++;
 	return 0;
@@ -1372,7 +1379,9 @@ int for3()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
 	return 0;
@@ -1405,7 +1414,9 @@ int for4()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
 	return 0;
@@ -1483,7 +1494,9 @@ int ifelse2()
 
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+    char* l1 = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
     label[++ltop]=lnum;
