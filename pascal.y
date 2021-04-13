@@ -20,17 +20,20 @@
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
 	void check_types(char* op1, char* op2);
-	int push();
-	int for1();
-	int for2();
-	int for3();
-	int for4();
-	int ifelse1();
-	int if1();
-	int ifelse2();
-	int ifelse3();
-	int if3();
-	int codegen_assign();
+	void push();
+	void push_symbol(char* symbol);
+	void push_value(char* type);
+	void for1();
+	void for2();
+	void for3();
+	void for4();
+	void ifelse1();
+	void if1();
+	void ifelse2();
+	void ifelse3();
+	void if3();
+	void codegen();
+	void codegen_assign();
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
@@ -460,7 +463,7 @@ more_type_identifiers :
 variable_block :
         T_VAR decl_stmts
 		{
-			printf("Variable block\n");
+			//printf("Variable block\n");
 			//$$ = $2;
 		}
         |
@@ -699,32 +702,24 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression
+        assignment_operators expression{}
         ;
 
 expression :
         simpleExpression
 		{
+			
 			// $<s.type>$ = $<s.type>1;
 			// $<s.intval>$ = $<s.intval>1;	
 			// $<s.floatval>$ = $<s.floatval>1;	
 			// $<s.stringval>$ = $<s.stringval>1;	
 			
 			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
-			int res = push();
 		}
-        | simpleExpression
+        | simpleExpression{push();} T_SINGLEEQ{push();} simpleExpression{codegen_assign();}
 		{
-			int res = push();
-		}
-		 T_SINGLEEQ
-		 {
-			int res = push();
-		}
-		  simpleExpression
-		  {
-			  int res = codegen_assign();
-		  }	
+			printf(" = %s  %s",$<s.str>0,$<s.str>1);
+		}	
 		| simpleExpression T_NE simpleExpression
 		| simpleExpression '<' simpleExpression
 		| simpleExpression T_LE simpleExpression
@@ -772,7 +767,7 @@ expression :
         ;
 
 simpleExpression :
-		term
+		term	
 		| simpleExpression '+' term
 		| simpleExpression '-' term
 		| simpleExpression T_BOOL_OR term
@@ -839,7 +834,7 @@ term :
 			else 
             {
 				// not sure what this is so I left      
-				printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+				//printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
 				$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 				
 				struct symbol_table *s = NULL;
@@ -877,15 +872,15 @@ factor :
 		'(' expression ')'	{$<s.intval>$ = $<s.intval>2;}
 		| '+' factor 	
 		{
-			printf("near 850 asterisk\n");
-			printf("%s %s\n",$<s.type>2,$<s.str>2);
+			//printf("near 850 asterisk\n");
+			//printf("%s %s\n",$<s.type>2,$<s.str>2);
 			// printf("%s %s\n",$<s.str>$,$<s.str>3);
 			// printf("%s %s\n",$<s.stringval>$,$<s.stringval>3);
 			// check_types($<s.str>1,$<s.str>3);
 		}
 		| '-' factor
 		| T_BOOL_NOT factor
-		| value  	//{	printf("%d\n", $1);}
+		| value  	
 		| T_IDENTIFIER 
 		{
 			if(check_valid_identifier(yyval.s.str)) {
@@ -897,6 +892,7 @@ factor :
 value :
         T_INTVAL
         {
+			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
@@ -968,6 +964,7 @@ value :
 				}
 			}
 			$<s.floatval>$ = $1;
+			printf("float\n");
 			//printf("%f\n", $1);
         }
         | T_BOOLVAL
@@ -1042,6 +1039,7 @@ value :
 					// printf("---------------\n");
 				}
 			}
+			printf("string\n");
 			$<s.str>$ = $1;
 			//printf("%s\n", $1);
         }
@@ -1056,23 +1054,23 @@ assignment_operators :
         ;
 
 if_statement :
-		T_IF expression T_THEN statements %prec T_IFX 
-		| T_IF expression T_THEN statements  T_ELSE statements
+		T_IF expression {if1();} T_THEN statements {if3();}%prec T_IFX 
+		| T_IF expression{ifelse1();} T_THEN statements {ifelse2();} T_ELSE statements {ifelse3();}
         ;
 
 fordo_statement :
-        T_FOR T_IDENTIFIER T_ASOP expression to_or_downto expression
+        T_FOR T_IDENTIFIER {push();} T_ASOP {push_symbol(":=");} expression { codegen_assign();} to_or_downto expression
 		{
-			int res = for1();
-			int res1 = for2();
-			// for2(); //
+			for1();
+			for2(); 
+			for3($<s.str>2);
 		} T_DO statements
 		{
 			// for4();
 		}
 to_or_downto :
-        T_TO
-        | T_DOWNTO
+        T_TO {push_symbol("<");}
+        | T_DOWNTO {push_symbol(">");}
         ;
 
 %%
@@ -1090,7 +1088,7 @@ char st[100][100];
 char i_[2]="0";
 int temp_i=0;
 char tmp_i[3];
-char temp[2]="t";
+char temp[5]="t";
 int label[20];
 int lnum=0;
 int ltop=0;
@@ -1257,42 +1255,70 @@ void check_types(char* op1, char* op2)
 	
 }
 
-int push()
+void push()
 {
+	printf("%s\n", yylval.s.str);
 	strcpy(st[++top],yylval.s.str);
-	return 0;
 }
 
-int for1()
+void push_symbol(char* symbol)
+{
+	strcpy(st[++top],symbol);
+}
+
+void push_value(char* type){
+	if( strcmp(type, "Integer")){
+		char s[10];
+		sprintf(s, "%d", yylval.s.intval);
+		strcpy(st[++top],s);
+	}
+}
+void codegen()
+{
+    strcpy(temp,"T");
+    sprintf(tmp_i, "%d", temp_i);
+    strcat(temp,tmp_i);
+    printf("%s = %s %s %s\n",temp,st[top-2],st[top-1],st[top]);
+    q[quadlen].op = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+    q[quadlen].arg2 = (char*)malloc(sizeof(char)*strlen(st[top]));
+    q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
+    strcpy(q[quadlen].op,st[top-1]);
+    strcpy(q[quadlen].arg1,st[top-2]);
+    strcpy(q[quadlen].arg2,st[top]);
+    strcpy(q[quadlen].res,temp);
+    quadlen++;
+    top-=2;
+    strcpy(st[top],temp);
+	//printf("codegen%s\n",temp);
+temp_i++;
+}
+void for1()
 {
     l_for = lnum;	
     printf("L%d: \n",lnum++);
     q[quadlen].op = (char*)malloc(sizeof(char)*6);
     q[quadlen].arg1 = NULL;
     q[quadlen].arg2 = NULL;
-    // q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
+    q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
     strcpy(q[quadlen].op,"Label");
     char x[10];
     sprintf(x,"%d",lnum-1);
-    printf("X is %s\n",x);
-	char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
-	l[0] = 'L';
-	l[1] = '\0';
-	// int length = (int)(sizeof(l)/sizeof(l[0])+sizeof(x)/sizeof(x[0]));
-	// printf("Length is %d",length);
-	q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
+    char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 	int i=0;
+	/*
 	for(i=0;i<quadlen;i++)
 		{
         printf("%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
-	}
-	return 0;
+	}*/
 }
 
-int for2()
+void for2()
 {
+	codegen();
+	
     strcpy(temp,"T");
     sprintf(tmp_i, "%d", temp_i);
     strcat(temp,tmp_i);
@@ -1314,9 +1340,7 @@ int for2()
     strcpy(q[quadlen].arg1,temp);
     char x[10];
     sprintf(x,"%d",lnum);
-    char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
-	l[0] = 'L';
-	l[1] = '\0';
+    char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 
@@ -1331,9 +1355,7 @@ int for2()
     strcpy(q[quadlen].op,"goto");
     char x1[10];
     sprintf(x1,"%d",lnum);
-    char* l1 = (char*) malloc((strlen(x1)+2)*sizeof(char));
-	l1[0] = 'L';
-	l1[1] = '\0';
+    char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,x1));
     quadlen++;
     label[++ltop]=lnum;
@@ -1345,15 +1367,18 @@ int for2()
     strcpy(q[quadlen].op,"Label");
     char x2[10];
     sprintf(x2,"%d",lnum);
-    char* l2 = (char*) malloc((strlen(x2)+2)*sizeof(char));
-	l2[0] = 'L';
-	l2[1] = '\0';
+    char l2[]="L";
     strcpy(q[quadlen].res,strcat(l2,x2));
     quadlen++;
-	return 0;
  }
-int for3()
+void for3(char* id)
 {
+	push_symbol("=");
+	push_symbol(id);
+	push_symbol("+");
+	push_symbol("1");
+	codegen();
+	codegen_assign();
     int x;
     x=label[ltop--];
     printf("goto L%d \n",l_for);
@@ -1379,16 +1404,13 @@ int for3()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
-	l1[0] = 'L';
-	l1[1] = '\0';
+    char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
-	return 0;
 
 }
 
-int for4()
+void for4()
 {
     int x;
     x=label[ltop--];
@@ -1414,30 +1436,27 @@ int for4()
     strcpy(q[quadlen].op,"Label");
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
-	l1[0] = 'L';
-	l1[1] = '\0';
+    char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
-	return 0;
 }
 
-int codegen_assign()
+void codegen_assign()
 {
-    printf("%s = %s\n",st[top-3],st[top]);
+	printf("%s %s %s \n", st[top-2], st[top-1], st[top]);
+    //printf("%s = %s\n",st[top-3],st[top]);
     q[quadlen].op = (char*)malloc(sizeof(char));
     q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
     q[quadlen].arg2 = NULL;
     q[quadlen].res = (char*)malloc(sizeof(char)*strlen(st[top-3]));
     strcpy(q[quadlen].op,"=");
     strcpy(q[quadlen].arg1,st[top]);
-    strcpy(q[quadlen].res,st[top-3]);
+    strcpy(q[quadlen].res,st[top-2]);
     quadlen++;
     top-=2;
-	return 0;
 }
 
-int ifelse1()
+void ifelse1()
 {
     lnum++;
     strcpy(temp,"T");
@@ -1466,10 +1485,9 @@ int ifelse1()
     quadlen++;
     temp_i++;
     label[++ltop]=lnum;
-	return 0;
 }
 
-int ifelse2()
+void ifelse2()
 {
     int x;
     lnum++;
@@ -1494,17 +1512,14 @@ int ifelse2()
 
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
-	l1[0] = 'L';
-	l1[1] = '\0';
+    char l1[]="L";
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
     label[++ltop]=lnum;
-	return 0;
 }
 
 
-int ifelse3()
+void ifelse3()
 {
 int y;
 y=label[ltop--];
@@ -1520,10 +1535,9 @@ q[quadlen].op = (char*)malloc(sizeof(char)*6);
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 lnum++;
-return 0;
 }
 
-int if1()
+void if1()
 {
  lnum++;
  strcpy(temp,"T");
@@ -1553,10 +1567,9 @@ int if1()
 
  temp_i++;
  label[++ltop]=lnum;
- return 0;
 }
 
-int if3()
+void if3()
 {
     int y;
     y=label[ltop--];
@@ -1571,5 +1584,4 @@ int if3()
     char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
-	return 0;
 }
