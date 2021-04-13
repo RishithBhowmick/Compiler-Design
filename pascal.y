@@ -688,6 +688,8 @@ expressionList :
 assignment_statements :
         T_IDENTIFIER 
         {
+			printf("Identifier %s\n",$<s.str>1);
+			push();
 			if(!check_valid_identifier(yylval.s.str)){
 				char error[1000];
 				//printf("Scope Level : %s ",curr_scope_level);
@@ -702,7 +704,7 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression
+        assignment_operators expression{codegen_assign();}
         ;
 
 expression :
@@ -767,11 +769,11 @@ expression :
 
 simpleExpression :
 		term
-		| simpleExpression '+' term 
-		| simpleExpression '-' term
-		| simpleExpression T_BOOL_OR term
-		| simpleExpression '|' term
-		| simpleExpression '!' term
+		| simpleExpression '+'{push_symbol("+");} term {codegen();}
+		| simpleExpression '-'{push_symbol("-");} term {codegen();}
+		| simpleExpression T_BOOL_OR {push_symbol("||");} term
+		| simpleExpression '|' {push_symbol("|");}term
+		| simpleExpression '!' {push_symbol("!");}term
 		{
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -815,17 +817,11 @@ simpleExpression :
 
 term :
 		factor	 
-		| term '*' factor	
-		{
-			printf("%s %s\n",$<s.type>1,$<s.type>3);
-			printf("%s %s\n",$<s.str>1,$<s.str>3);
-			check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));
-
-		}
-		| term '/' factor
-		| term '%' factor
-		| term T_BOOL_AND factor
-		| term '&' factor
+		| term '*' {push_symbol("*");}factor {codegen();}	
+		| term '/' {push_symbol("/");}factor {codegen();}
+		| term '%' {push_symbol("%");}factor {codegen();}
+		| term T_BOOL_AND{push_symbol("&&");} factor {codegen();}
+		| term '&' {push_symbol("&");}factor {codegen();}
 		{
 			if (assignment_name_stack_top == -1) {
 				break;
@@ -882,6 +878,7 @@ factor :
 		| value  
 		| T_IDENTIFIER 
 		{
+			push();
 			if(check_valid_identifier(yyval.s.str)) {
 				union data variable_value = get_identifier_data(yylval.s.str);
 				//$<s.intval>$ = variable_value.int_value;
@@ -1046,11 +1043,13 @@ value :
         ;
 
 assignment_operators :
-        T_ASOP
-        | T_AS_PE
-        | T_AS_SE
-        | T_AS_MULE
-        | T_AS_DIVE
+        T_ASOP{
+			push_symbol("=");
+		}
+        | T_AS_PE {push_symbol("+=");}
+        | T_AS_SE {push_symbol("-=");}
+        | T_AS_MULE{push_symbol("*=");}
+        | T_AS_DIVE{push_symbol("/=");}
         ;
 
 if_statement :
@@ -1305,7 +1304,9 @@ void for1()
     strcpy(q[quadlen].op,"Label");
     char x[10];
     sprintf(x,"%d",lnum-1);
-    char l[]="L";
+    char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 	int i=0;
