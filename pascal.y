@@ -27,13 +27,12 @@
 	void for2();
 	void for3();
 	void for4();
-	void ifelse1();
 	void if1();
-	void ifelse2();
-	void ifelse3();
+	void if2();
 	void if3();
 	void codegen();
 	void codegen_assign();
+	void codegen_assigna();
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
@@ -653,19 +652,19 @@ more_func_identifiers:
 		;
 
 execution_block :
-        T_BEGIN statementList T_END
+        T_BEGIN statementList T_END 
         ;
 
 statementList :
 		statements	
-		| statements ';' statementList
+		| statements ';' statementList	
 		| error ';' 
 		;
 
 statements :
 		execution_block
 		| assignment_statements	
-        | if_statement
+        | if_statement 
         | fordo_statement
         | procedure_call_statements
         |
@@ -676,7 +675,7 @@ procedure_call_statements:
 		;
 
 actuals :
-		'(' expressionList ')'
+		'(' expressionList ')' 
 		|
 		;
 
@@ -688,7 +687,7 @@ expressionList :
 assignment_statements :
         T_IDENTIFIER 
         {
-			printf("Identifier %s\n",$<s.str>1);
+			//printf("Identifier %s\n",$<s.str>1);
 			push();
 			if(!check_valid_identifier(yylval.s.str)){
 				char error[1000];
@@ -717,9 +716,9 @@ expression :
 			
 			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
 		}
-        | simpleExpression{push();} T_SINGLEEQ{push();} simpleExpression{codegen_assign();}
+        | simpleExpression T_SINGLEEQ{	push_symbol("=");} simpleExpression{codegen_assigna();}
 		{
-			printf(" = %s  %s",$<s.str>0,$<s.str>1);
+			//printf(" = %s  %s",$<s.str>0,$<s.str>1);
 		}	
 		| simpleExpression T_NE simpleExpression
 		| simpleExpression '<' simpleExpression
@@ -728,7 +727,7 @@ expression :
 		| simpleExpression T_GE simpleExpression
         {
                 // not sure what this is so I left      
-            printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
+            //printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
 			$<s.intval>$ = solution($<s.intval>1,$<s.intval>3,$<s.str>2);
 			
 			if(assignment_name_stack_top == -1) {
@@ -817,7 +816,8 @@ simpleExpression :
 
 term :
 		factor	 
-		| term '*' {push_symbol("*");}factor {codegen();}	
+		| term '*' {push_symbol("*");}factor {codegen();	//check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));
+		}	
 		| term '/' {push_symbol("/");}factor {codegen();}
 		| term '%' {push_symbol("%");}factor {codegen();}
 		| term T_BOOL_AND{push_symbol("&&");} factor {codegen();}
@@ -1051,11 +1051,28 @@ assignment_operators :
         | T_AS_MULE{push_symbol("*=");}
         | T_AS_DIVE{push_symbol("/=");}
         ;
-
+/*
 if_statement :
-		T_IF expression {if1();} T_THEN statements {if3();}%prec T_IFX 
-		| T_IF expression{ifelse1();} T_THEN statements {ifelse2();} T_ELSE statements {ifelse3();}
+		T_IF expression T_THEN statements %prec T_IFX
+		{
+			if1();
+			if2();
+		}
+		| T_IF expression T_THEN statements  T_ELSE statements 
+		{
+			ifelse1(); 
+			ifelse2();
+			ifelse3();	
+		}
         ;
+*/
+if_statement :
+		T_IF expression {if1();} T_THEN statements {if2();}else_
+		;
+else_:
+		T_ELSE statements {if3();}
+		|
+		;
 
 fordo_statement :
         T_FOR T_IDENTIFIER {push();} T_ASOP {push_symbol(":=");} expression { codegen_assign();} to_or_downto expression
@@ -1256,7 +1273,7 @@ void check_types(char* op1, char* op2)
 
 void push()
 {
-	printf("%s\n", yylval.s.str);
+	//printf("%s\n", yylval.s.str);
 	strcpy(st[++top],yylval.s.str);
 }
 
@@ -1473,9 +1490,36 @@ void codegen_assign()
     top-=2;
 }
 
+void codegen_assigna()
+{
+strcpy(temp,"T");
+sprintf(tmp_i, "%d", temp_i);
+strcat(temp,tmp_i);
+printf("%s = %s %s %s\n",temp,st[top-2],st[top-1],st[top]);
+//printf("%d\n",strlen(st[top]));
+
+	q[quadlen].op = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
+    q[quadlen].arg2 = (char*)malloc(sizeof(char)*strlen(st[top]));
+    q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
+    strcpy(q[quadlen].op,st[top-1]);
+    strcpy(q[quadlen].arg1,st[top-2]);
+    strcpy(q[quadlen].arg2,st[top]);
+    strcpy(q[quadlen].res,temp);
+    quadlen++;
+
+	top-=2;
+	temp_i++;
+//	printf("TOP%s\n", st[top]);
+	strcpy(st[top],temp);
+//	printf("TOP%s\n", st[top]);
+}
+
+/*
 void ifelse1()
 {
     lnum++;
+	printf("if%s\n",st[top]);
     strcpy(temp,"T");
     sprintf(tmp_i, "%d", temp_i);
     strcat(temp,tmp_i);
@@ -1553,13 +1597,14 @@ q[quadlen].op = (char*)malloc(sizeof(char)*6);
     quadlen++;
 lnum++;
 }
-
+*/
 void if1()
 {
  lnum++;
  strcpy(temp,"T");
  sprintf(tmp_i, "%d", temp_i);
  strcat(temp,tmp_i);
+ //printf("if1-%d\n", top);
  printf("%s = not %s\n",temp,st[top]);
  q[quadlen].op = (char*)malloc(sizeof(char)*4);
  q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
@@ -1584,6 +1629,36 @@ void if1()
 
  temp_i++;
  label[++ltop]=lnum;
+}
+
+void if2(){
+	int x;
+    lnum++;
+    x=label[ltop--];
+    printf("goto L%d\n",lnum);
+    q[quadlen].op = (char*)malloc(sizeof(char)*5);
+    q[quadlen].arg1 = NULL;
+    q[quadlen].arg2 = NULL;
+    q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
+    strcpy(q[quadlen].op,"goto");
+    char jug[10];
+    sprintf(jug,"%d",lnum);
+    char l[]="L";
+    strcpy(q[quadlen].res,strcat(l,jug));
+    quadlen++;
+	printf("L%d: \n",x);
+    q[quadlen].op = (char*)malloc(sizeof(char)*6);
+    q[quadlen].arg1 = NULL;
+    q[quadlen].arg2 = NULL;
+    q[quadlen].res = (char*)malloc(sizeof(char)*(x+2));
+    strcpy(q[quadlen].op,"Label");
+
+    char jug1[10];
+    sprintf(jug1,"%d",x);
+    char l1[]="L";
+    strcpy(q[quadlen].res,strcat(l1,jug1));
+    quadlen++;
+    label[++ltop]=lnum;
 }
 
 void if3()
