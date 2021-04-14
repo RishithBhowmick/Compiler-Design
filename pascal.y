@@ -33,12 +33,14 @@
 	void codegen();
 	void codegen_assign();
 	void codegen_assigna();
+	void call_function();
+	void write_params(int n);
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
 	char *assignment_name_stack[31];
 	int assignment_name_stack_top = -1;
-	
+	int write_param_count;
 	char *curr_scope_level = "global";
 
 	// struct variable_type_info var_type_information;
@@ -204,6 +206,7 @@
 	// 	disp(tree, 0);
 	// }
 	int quadlen = 0;
+	char st[100][100];
 	quad q[100];	// declation of quadruples
 %}
 %locations 
@@ -341,6 +344,7 @@ const_block :
 
 const_definition :
         T_IDENTIFIER T_SINGLEEQ constant{
+		
 		struct symbol_table *s = NULL;
 		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
 		if(!s){
@@ -375,21 +379,74 @@ const_definition :
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
 		
+		printf("%s = %s\n",$<s.str>1,st[top]);
+		q[quadlen].op = (char*)malloc(sizeof(char));
+    	q[quadlen].arg1 = (char*)malloc(sizeof(char)*10);
+    	q[quadlen].arg2 = NULL;
+    	q[quadlen].res = (char*)malloc(sizeof(char)*10);
+    	strcpy(q[quadlen].op,"=");
+    	strcpy(q[quadlen].arg1,st[top]);
+    	strcpy(q[quadlen].res,$<s.str>1);
+		top--;
+    	quadlen++;
 		}';' more_const_definition
 		| error ';'
         ;
 
 constant :
-        T_INTVAL
-        | T_BOOLVAL
-        | T_FLOATVAL
-        | T_STRINGVAL
+        T_INTVAL {push_value(yylval.s.type);}
+        | T_BOOLVAL {push_value(yylval.s.type);}
+        | T_FLOATVAL {push_value(yylval.s.type);}
+        | T_STRINGVAL {push_value(yylval.s.type);}
         ;
 
 more_const_definition :
         T_IDENTIFIER T_SINGLEEQ constant{
-			// var_name_stack_top++;
-			// var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
+			struct symbol_table *s = NULL;
+		HASH_FIND_STR(SYMBOL_TABLE,$<s.str>1, s);
+		if(!s){
+			s = malloc(sizeof(struct symbol_table));
+			strcpy(s->type,yylval.s.type);
+			s->scope_level = strdup("const");
+			char var_mang_name[31];
+			strcpy(var_mang_name, yylval.s.str);
+			strcat(var_mang_name, "$");
+			strcat(var_mang_name, s->scope_level);
+			strcpy(s->var_name,var_mang_name);
+			// printf("\nAlert : Inserting Variable '%s' in to the Symbol Table.\n", var_mang_name);
+			s->line_no = yylloc.first_line;
+			s->col_no = yylloc.first_column;
+			if(yylval.s.intval!=0){
+				s->var_value.int_value = $<s.intval>3;
+				fprintf(fptr,"%s %d\n",yylval.s.str,yylval.s.intval);
+				// printf("%s = %d",s->var_name,s->var_value.intval);
+			}
+			if(yylval.s.floatval!=0){				
+				s->var_value.float_value = $<s.floatval>3;
+				fprintf(fptr,"%s %f\n",yylval.s.str,yylval.s.floatval);
+				// printf("%s = %f",s->var_name,s->var_value.intval);
+			}
+			if (yylval.s.stringval != NULL){
+				fprintf(fptr,"%s %s\n",yylval.s.str,yylval.s.stringval);
+			}
+
+			HASH_ADD_STR(SYMBOL_TABLE, var_name, s);
+			//printf("yayy\n");
+		}
+		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
+		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
+		
+		printf("%s = %s\n",$<s.str>1,st[top]);
+		q[quadlen].op = (char*)malloc(sizeof(char));
+    	q[quadlen].arg1 = (char*)malloc(sizeof(char)*10);
+    	q[quadlen].arg2 = NULL;
+    	q[quadlen].res = (char*)malloc(sizeof(char)*10);
+    	strcpy(q[quadlen].op,"=");
+    	strcpy(q[quadlen].arg1,st[top]);
+    	strcpy(q[quadlen].res,$<s.str>1);
+		top--;
+    	quadlen++;
+			
 		}
 		';' more_const_definition
         | error ';'
@@ -671,11 +728,15 @@ statements :
         ;
 	
 procedure_call_statements:
-		T_PROCALL actuals
+		T_PROCALL {push_symbol("print");} actuals {call_function();}
 		;
 
 actuals :
-		'(' expressionList ')' 
+		'(' {write_param_count = 0;}
+		expressionList
+		{
+			write_params(write_param_count);
+		} ')' 
 		|
 		;
 
@@ -687,15 +748,12 @@ expressionList :
 assignment_statements :
         T_IDENTIFIER 
         {
-			//printf("Identifier %s\n",$<s.str>1);
 			push();
 			if(!check_valid_identifier(yylval.s.str)){
 				char error[1000];
 				//printf("Scope Level : %s ",curr_scope_level);
 				sprintf(error,"Variable %s is not declared.",yylval.s.str);
 				yyerror(error);
-				// printf("---------------\n");
-				//exit(1);	// this fixes segfault
 			}
 			else
 			{
@@ -717,14 +775,11 @@ expression :
 			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
 		}
         | simpleExpression T_SINGLEEQ{	push_symbol("=");} simpleExpression{codegen_assigna();}
-		{
-			//printf(" = %s  %s",$<s.str>0,$<s.str>1);
-		}	
-		| simpleExpression T_NE simpleExpression
-		| simpleExpression '<' simpleExpression
-		| simpleExpression T_LE simpleExpression
-		| simpleExpression '>' simpleExpression
-		| simpleExpression T_GE simpleExpression
+		| simpleExpression T_NE  {	push_symbol("<>");}simpleExpression {codegen_assigna();}
+		| simpleExpression '<' {push_symbol("<");} simpleExpression {codegen_assigna();}
+		| simpleExpression T_LE {push_symbol("<=");} simpleExpression {codegen_assigna();}
+		| simpleExpression '>' {push_symbol(">");} simpleExpression {codegen_assigna();}
+		| simpleExpression T_GE {	push_symbol(">=");} simpleExpression {codegen_assigna();}
         {
                 // not sure what this is so I left      
             //printf("%d and %d and %s\n",$<s.intval>1,$<s.intval>3,$<s.str>2);
@@ -770,9 +825,9 @@ simpleExpression :
 		term
 		| simpleExpression '+'{push_symbol("+");} term {codegen();}
 		| simpleExpression '-'{push_symbol("-");} term {codegen();}
-		| simpleExpression T_BOOL_OR {push_symbol("||");} term
-		| simpleExpression '|' {push_symbol("|");}term
-		| simpleExpression '!' {push_symbol("!");}term
+		| simpleExpression T_BOOL_OR {push_symbol("||");} term {codegen();}
+		| simpleExpression '|' {push_symbol("|");}term {codegen();}
+		| simpleExpression '!' {push_symbol("!");}term {codegen();}
 		{
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -816,8 +871,7 @@ simpleExpression :
 
 term :
 		factor	 
-		| term '*' {push_symbol("*");}factor {codegen();	//check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));
-		}	
+		| term '*' {push_symbol("*");}factor {codegen();}	//check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));			
 		| term '/' {push_symbol("/");}factor {codegen();}
 		| term '%' {push_symbol("%");}factor {codegen();}
 		| term T_BOOL_AND{push_symbol("&&");} factor {codegen();}
@@ -865,19 +919,13 @@ term :
 
 factor :
 		'(' expression ')'	{$<s.intval>$ = $<s.intval>2;}
-		| '+' factor 	
-		{
-			//printf("near 850 asterisk\n");
-			//printf("%s %s\n",$<s.type>2,$<s.str>2);
-			// printf("%s %s\n",$<s.str>$,$<s.str>3);
-			// printf("%s %s\n",$<s.stringval>$,$<s.stringval>3);
-			// check_types($<s.str>1,$<s.str>3);
-		}
-		| '-' factor
-		| T_BOOL_NOT factor
+		| '+'{push_symbol("+");} factor {codegen();} 	
+		| '-'{ push_symbol("-");} factor{codegen();}
+		| T_BOOL_NOT{push_symbol("~");} factor{codegen();}
 		| value  
 		| T_IDENTIFIER 
 		{
+			write_param_count++;
 			push();
 			if(check_valid_identifier(yyval.s.str)) {
 				union data variable_value = get_identifier_data(yylval.s.str);
@@ -888,6 +936,7 @@ factor :
 value :
         T_INTVAL
         {
+			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -918,14 +967,13 @@ value :
 					//printf("Scope Level : %s ",curr_scope_level);
 					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					// printf("---------------\n");
+			
 				}
 			}
-			// $<s.intval>$ = $1;
-			// printf("%d\n", $$);
         }
         | T_FLOATVAL
         {
+			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -957,14 +1005,14 @@ value :
 					//printf("Scope Level : %s ",curr_scope_level);
 					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					// printf("---------------\n");
 				}
 			}
 			$<s.floatval>$ = $1;
-			//printf("%f\n", $1);
+
         }
         | T_BOOLVAL
         {
+			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -993,17 +1041,16 @@ value :
 				}
 				else {
 					char error[1000];
-					//printf("Scope Level : %s ",curr_scope_level);
 					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					// printf("---------------\n");
+					
 				}
 			}
 			$<s.intval>$ = $1;
-			//printf("%d\n", $1);
         }
         | T_STRINGVAL
         {
+			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -1031,14 +1078,11 @@ value :
 				}
 				else {
 					char error[1000];
-					//printf("Scope Level : %s ",curr_scope_level);
 					sprintf(error,"Variable %s is not declared.",yylval.s.str);
 					yyerror(error);
-					// printf("---------------\n");
 				}
 			}
 			$<s.str>$ = $1;
-			//printf("%s\n", $1);
         }
         ;
 
@@ -1051,21 +1095,6 @@ assignment_operators :
         | T_AS_MULE{push_symbol("*=");}
         | T_AS_DIVE{push_symbol("/=");}
         ;
-/*
-if_statement :
-		T_IF expression T_THEN statements %prec T_IFX
-		{
-			if1();
-			if2();
-		}
-		| T_IF expression T_THEN statements  T_ELSE statements 
-		{
-			ifelse1(); 
-			ifelse2();
-			ifelse3();	
-		}
-        ;
-*/
 if_statement :
 		T_IF expression {if1();} T_THEN statements {if2();}else_
 		;
@@ -1094,12 +1123,11 @@ int yyerror(const char *message) {
 	printf("\033[0;31m");
 	printf("\n\nInvalid Syntax:%d:%d Reason being %s\n",yylloc.first_line,yylloc.first_column,message);
 	printf("\033[0;37m");
-	// printf("Compilation Failed\n");
 	successful=0;
 	return 0;
 }
 
-char st[100][100];
+// char st[100][100];
 
 char i_[2]="0";
 int temp_i=0;
@@ -1273,7 +1301,6 @@ void check_types(char* op1, char* op2)
 
 void push()
 {
-	//printf("%s\n", yylval.s.str);
 	strcpy(st[++top],yylval.s.str);
 }
 
@@ -1283,11 +1310,25 @@ void push_symbol(char* symbol)
 }
 
 void push_value(char* type){
-	if( strcmp(type, "Integer")){
+	if( strcmp(type, "integer")==0){
 		char s[10];
 		sprintf(s, "%d", yylval.s.intval);
 		strcpy(st[++top],s);
 	}
+	if( strcmp(type, "float")==0){
+		char s[10];
+		sprintf(s, "%f", yylval.s.floatval);
+		strcpy(st[++top],s);
+	}
+	if( strcmp(type, "boolean")==0){
+		char s[10];
+		sprintf(s, "%d", yylval.s.intval);
+		strcpy(st[++top],s);
+	}
+	if(strcmp(type, "string")==0){
+		strcpy(st[++top],yylval.s.str);
+	}
+
 }
 void codegen()
 {
@@ -1305,9 +1346,7 @@ void codegen()
     strcpy(q[quadlen].res,temp);
     quadlen++;
     top-=2;
-	//printf("codegen%s\n",st[top]);
-    strcpy(st[top],temp);
-	//printf("codegen%s\n",temp);
+    strcpy(st[top],temp);	
 temp_i++;
 }
 void for1()
@@ -1327,11 +1366,6 @@ void for1()
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 	int i=0;
-	/*
-	for(i=0;i<quadlen;i++)
-		{
-        printf("%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
-	}*/
 }
 
 void for2()
@@ -1478,7 +1512,6 @@ void for4()
 void codegen_assign()
 {
 	printf("%s %s %s \n", st[top-2], st[top-1], st[top]);
-    //printf("%s = %s\n",st[top-3],st[top]);
     q[quadlen].op = (char*)malloc(sizeof(char));
     q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
     q[quadlen].arg2 = NULL;
@@ -1496,7 +1529,6 @@ strcpy(temp,"T");
 sprintf(tmp_i, "%d", temp_i);
 strcat(temp,tmp_i);
 printf("%s = %s %s %s\n",temp,st[top-2],st[top-1],st[top]);
-//printf("%d\n",strlen(st[top]));
 
 	q[quadlen].op = (char*)malloc(sizeof(char)*strlen(st[top-1]));
     q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
@@ -1507,104 +1539,18 @@ printf("%s = %s %s %s\n",temp,st[top-2],st[top-1],st[top]);
     strcpy(q[quadlen].arg2,st[top]);
     strcpy(q[quadlen].res,temp);
     quadlen++;
-
 	top-=2;
 	temp_i++;
-//	printf("TOP%s\n", st[top]);
 	strcpy(st[top],temp);
-//	printf("TOP%s\n", st[top]);
+
 }
 
-/*
-void ifelse1()
-{
-    lnum++;
-	printf("if%s\n",st[top]);
-    strcpy(temp,"T");
-    sprintf(tmp_i, "%d", temp_i);
-    strcat(temp,tmp_i);
-    printf("%s = not %s\n",temp,st[top]);
-    q[quadlen].op = (char*)malloc(sizeof(char)*4);
-    q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
-    q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
-    strcpy(q[quadlen].op,"not");
-    strcpy(q[quadlen].arg1,st[top]);
-    strcpy(q[quadlen].res,temp);
-    quadlen++;
-    printf("if %s goto L%d\n",temp,lnum);
-    q[quadlen].op = (char*)malloc(sizeof(char)*3);
-    q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(temp));
-    q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
-    strcpy(q[quadlen].op,"if");
-    strcpy(q[quadlen].arg1,temp);
-    char x[10];
-    sprintf(x,"%d",lnum);
-    char l[]="L";
-    strcpy(q[quadlen].res,strcat(l,x));
-    quadlen++;
-    temp_i++;
-    label[++ltop]=lnum;
-}
-
-void ifelse2()
-{
-    int x;
-    lnum++;
-    x=label[ltop--];
-    printf("goto L%d\n",lnum);
-    q[quadlen].op = (char*)malloc(sizeof(char)*5);
-    q[quadlen].arg1 = NULL;
-    q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*(lnum+2));
-    strcpy(q[quadlen].op,"goto");
-    char jug[10];
-    sprintf(jug,"%d",lnum);
-    char l[]="L";
-    strcpy(q[quadlen].res,strcat(l,jug));
-    quadlen++;
-    printf("L%d: \n",x);
-    q[quadlen].op = (char*)malloc(sizeof(char)*6);
-    q[quadlen].arg1 = NULL;
-    q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*(x+2));
-    strcpy(q[quadlen].op,"Label");
-
-    char jug1[10];
-    sprintf(jug1,"%d",x);
-    char l1[]="L";
-    strcpy(q[quadlen].res,strcat(l1,jug1));
-    quadlen++;
-    label[++ltop]=lnum;
-}
-
-
-void ifelse3()
-{
-int y;
-y=label[ltop--];
-printf("L%d: \n",y);
-q[quadlen].op = (char*)malloc(sizeof(char)*6);
-    q[quadlen].arg1 = NULL;
-    q[quadlen].arg2 = NULL;
-    q[quadlen].res = (char*)malloc(sizeof(char)*(y+2));
-    strcpy(q[quadlen].op,"Label");
-    char x[10];
-    sprintf(x,"%d",y);
-    char l[]="L";
-    strcpy(q[quadlen].res,strcat(l,x));
-    quadlen++;
-lnum++;
-}
-*/
 void if1()
 {
  lnum++;
  strcpy(temp,"T");
  sprintf(tmp_i, "%d", temp_i);
  strcat(temp,tmp_i);
- //printf("if1-%d\n", top);
  printf("%s = not %s\n",temp,st[top]);
  q[quadlen].op = (char*)malloc(sizeof(char)*4);
  q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
@@ -1676,4 +1622,41 @@ void if3()
     char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
+}
+
+void write_params(int n){
+	for(int i=0;i<n;i++){
+		printf("param %s\n",st[top]);
+		q[quadlen].op = (char*)malloc(sizeof(char)*10);
+		q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
+		q[quadlen].arg2 = NULL;
+		q[quadlen].res = NULL;
+		strcpy(q[quadlen].op,"param");
+		strcpy(q[quadlen].arg1,st[top]);
+		quadlen++;
+		top--;
+	}
+
+	
+}
+
+void call_function(){
+	strcpy(temp,"T");
+    sprintf(tmp_i, "%d", temp_i);
+    strcat(temp,tmp_i);
+    printf("%s = call(%s, %d)\n",temp,st[top],write_param_count);
+    q[quadlen].op = (char*)malloc(sizeof(char)*10);
+    q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
+    q[quadlen].arg2 = (char*)malloc(sizeof(char)*10);
+    q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
+	char s[10];
+	sprintf(s,"%d",write_param_count);
+    strcpy(q[quadlen].op,"call");
+    strcpy(q[quadlen].arg1,st[top]);
+    strcpy(q[quadlen].arg2,s);
+    strcpy(q[quadlen].res,temp);
+    quadlen++;
+    top--;
+    strcpy(st[top],temp);	
+	temp_i++;
 }
