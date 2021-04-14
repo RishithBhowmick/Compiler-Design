@@ -42,7 +42,7 @@
 	int assignment_name_stack_top = -1;
 	int write_param_count;
 	char *curr_scope_level = "global";
-
+	//char** ops = ["+", "-", "*", "/"];
 	// struct variable_type_info var_type_information;
 	struct symbol_table *SYMBOL_TABLE = NULL; /*Generic Symbol Table*/
 	// We are using a hash table as the data structure for the symbol table
@@ -128,13 +128,26 @@
 
     int check_valid_identifier(char* var_name) {
 		struct symbol_table *s = NULL;
+		//printf("A%s\n",curr_scope_level);
 		char var_mang_name[31];
 		strcpy(var_mang_name, var_name);
 		strcat(var_mang_name, "$");
 		strcat(var_mang_name, curr_scope_level);
 		HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
-		if(!s)
-			return 0;
+		if(!s){
+			strcpy(var_mang_name, var_name);
+			strcat(var_mang_name, "$");
+			strcat(var_mang_name, "const");
+			//printf("---%s\n",var_mang_name);
+			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
+			if(!s){
+				return 0;
+			}
+			else{
+				return 1;
+			}
+			return 0;	
+		}		
 		return 1;
 
 	}
@@ -596,13 +609,13 @@ procedure_block:
 		T_PROCEDURE T_IDENTIFIER
 		{
 			curr_scope_level = strdup(yylval.s.str);
-			printf("Entering the Procedure %s\n", curr_scope_level);
+			//printf("Entering the Procedure %s\n", curr_scope_level);
 		}
 		';'  block ';'
 		| T_PROCEDURE T_IDENTIFIER 
 		{
 			curr_scope_level = strdup(yylval.s.str);
-			printf("Entering the Procedure %s\n", curr_scope_level);
+			//printf("Entering the Procedure %s\n", curr_scope_level);
 		}
 		'(' param_list ')' ';'  block ';'
 		;
@@ -617,7 +630,7 @@ function_block:
 		T_FUNCTION T_IDENTIFIER    
 		{
 			curr_scope_level = strdup(yylval.s.str);
-			printf("Entering the Function %s\n", curr_scope_level);
+			//printf("Entering the Function %s\n", curr_scope_level);
 			struct symbol_table *s = NULL;
 			HASH_FIND_STR(SYMBOL_TABLE,$<s.str>2, s);
 			if(!s){
@@ -761,7 +774,30 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression{codegen_assign();}
+        assignment_operators expression{codegen_assign();
+		printf("\n\nSymbol Table Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
+
+		struct symbol_table *s;
+		int i=0;
+	    for(s=SYMBOL_TABLE,i=0; s != NULL,i<HASH_COUNT(SYMBOL_TABLE); s=s->hh.next,i++) {
+
+	    	if(strcmp(s->type,"string")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+				else if(strcmp(s->type,"integer")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else if(strcmp(s->type,"real")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
+				}
+				else if(strcmp(s->type,"boolean")==0){
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
+				}
+				else {
+					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
+				}
+		}
+		}
         ;
 
 expression :
@@ -871,7 +907,7 @@ simpleExpression :
 
 term :
 		factor	 
-		| term '*' {push_symbol("*");}factor {codegen();}	//check_types(strcat($<s.str>1,"$global"),strcat($<s.str>3,"$global"));			
+		| term '*' {push_symbol("*");}factor {codegen();	printf("--%s %s\n", $<s.str>1, $<s.str>3);check_types($<s.str>1, $<s.str>3);}			
 		| term '/' {push_symbol("/");}factor {codegen();}
 		| term '%' {push_symbol("%");}factor {codegen();}
 		| term T_BOOL_AND{push_symbol("&&");} factor {codegen();}
@@ -927,21 +963,26 @@ factor :
 		{
 			write_param_count++;
 			push();
-			if(check_valid_identifier(yyval.s.str)) {
-				union data variable_value = get_identifier_data(yylval.s.str);
-				//$<s.intval>$ = variable_value.int_value;
+			if(!check_valid_identifier(yylval.s.str)){
+				char error[1000];
+				//printf("Scope Level : %s ",curr_scope_level);
+				sprintf(error,"Variable %s is not declared.",yylval.s.str);
+				yyerror(error);
 			}
         }
 
 value :
         T_INTVAL
         {
+			printf("INTVAL%d %s\n", yylval.s.intval, $<s.stringval>-1);
+			char* check = $<s.stringval>-1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else {
+			else if (!check)
+			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
 				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
@@ -973,12 +1014,13 @@ value :
         }
         | T_FLOATVAL
         {
+			char* check = $<s.stringval>-1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else 
+			else if (!check)
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1012,12 +1054,13 @@ value :
         }
         | T_BOOLVAL
         {
+			char* check = $<s.stringval>-1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else 
+			else if (!check)
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1050,12 +1093,14 @@ value :
         }
         | T_STRINGVAL
         {
+			char* check = $<s.stringval>-1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else {
+			else if (!check)
+			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
 				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
@@ -1194,7 +1239,7 @@ int main(int argc,char* argv[]) {
 				else if(strcmp(s->type,"integer")==0){
 					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
 				}
-				else if(strcmp(s->type,"float")==0){
+				else if(strcmp(s->type,"real")==0){
 					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
 				}
 				else if(strcmp(s->type,"boolean")==0){
@@ -1229,71 +1274,54 @@ double time_elapsed(struct timespec *start, struct timespec *end) {
 
 void check_types(char* op1, char* op2)
 {
-		printf("\033[0;37m");
-		printf("\n\nSymbol Table in function, Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
-
-		struct symbol_table *s;
-		int i=0;
-	    for(s=SYMBOL_TABLE,i=0; s != NULL,i<HASH_COUNT(SYMBOL_TABLE); s=s->hh.next,i++) {
-
-	    	if(strcmp(s->type,"string")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
-				}
-				else if(strcmp(s->type,"integer")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
-				}
-				else if(strcmp(s->type,"float")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
-				}
-				else if(strcmp(s->type,"boolean")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
-				}
-				else {
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
-				}
-
-	    }
 	struct symbol_table *s1 = NULL;	
 	struct symbol_table *s2 = NULL;	
-	HASH_FIND_STR(SYMBOL_TABLE, op1, s1);
-	HASH_FIND_STR(SYMBOL_TABLE, op2, s2);
+	char var_mang_name1[31];
+	char var_mang_name2[31];
+	strcpy(var_mang_name1, op1);
+	strcat(var_mang_name1, "$");
+	strcat(var_mang_name1, curr_scope_level);
+	strcpy(var_mang_name2, op2);
+	strcat(var_mang_name2, "$");
+	strcat(var_mang_name2, curr_scope_level);
+	HASH_FIND_STR(SYMBOL_TABLE, var_mang_name1, s1);
+	HASH_FIND_STR(SYMBOL_TABLE, var_mang_name2, s2);
 	// check if both symbols are present in the symbol table
-	// printf("%s %s",s1->type,s2->type);
+	//printf("%s %s",s1->type,s2->type);
 	if (s1 && s2){
-		// printf("%s %s",s1->type,s2->type);
+		 printf("A%s %s",s1->type,s2->type);
 		if (strcmp(s1->type, s2->type) !=0)
 		{
 		
 
 			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"integer")==0){
-				printf("Adding 2 integers\n");
+				//printf("Adding 2 integers\n");
 				
 			}
 
-			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"float")==0){
-				printf("Adding 2 integers, typecasting 1st number\n");
+			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"real")==0){
+				printf("Warning: Adding 2 integers, typecasting 1st number\n");
 				
 			}
 
-			if (strcmp(s1->type,"float")==0 && strcmp(s2->type,"integer")==0){
-				printf("Adding 2 integers, typecasting 2st number\n");
+			if (strcmp(s1->type,"real")==0 && strcmp(s2->type,"integer")==0){
+				printf("Warning: Adding 2 integers, typecasting 2st number\n");
 				
 			}
-			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"bool")==0) || (strcmp(s1->type,"bool")==0 && strcmp(s2->type,"int")==0) ){
+			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"boolean")==0) || (strcmp(s1->type,"boolean")==0 && strcmp(s2->type,"integer")==0) ){
 				// printf("Adding 2 integers, typecasting 2st number\n");
 				// printf("Cannot add int and boolean, aborting\n");	
-				yyerror("Cannot add int and boolean, aborting\n\n");	
+				yyerror("Warning: Cannot add int and boolean, aborting\n\n");	
 			}
+
 			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"string")==0) || (strcmp(s1->type,"string")==0 && strcmp(s2->type,"int")==0) ){
 				// printf("Adding 2 integers, typecasting 2st number\n");
 				// printf("Cannot add int and boolean, aborting\n");	
-				yyerror("Cannot add int and string, aborting\n\n");	
+				yyerror("Warning: Cannot add int and string, aborting\n\n");	
 			}
-
-
 			}
-		else{
-			printf("Valid as they are the same types\n");
+			else{
+			yyerror("Abort: Incompatible Datatypes.");
 		}
 	}
 	
@@ -1315,7 +1343,7 @@ void push_value(char* type){
 		sprintf(s, "%d", yylval.s.intval);
 		strcpy(st[++top],s);
 	}
-	if( strcmp(type, "float")==0){
+	if( strcmp(type, "real")==0){
 		char s[10];
 		sprintf(s, "%f", yylval.s.floatval);
 		strcpy(st[++top],s);
