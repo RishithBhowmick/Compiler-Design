@@ -19,7 +19,9 @@
     extern FILE *yyin;
     extern FILE *yyout;
     double time_elapsed(struct timespec *start, struct timespec *end);
-	void check_types(char* op1, char* op2);
+	char* get_type(char* op1);
+	//void check_types(char* op1, char* op2);
+	void check_t(char* t1, char* t2);
 	void push();
 	void push_symbol(char* symbol);
 	void push_value(char* type);
@@ -128,7 +130,6 @@
 
     int check_valid_identifier(char* var_name) {
 		struct symbol_table *s = NULL;
-		//printf("A%s\n",curr_scope_level);
 		char var_mang_name[31];
 		strcpy(var_mang_name, var_name);
 		strcat(var_mang_name, "$");
@@ -138,7 +139,7 @@
 			strcpy(var_mang_name, var_name);
 			strcat(var_mang_name, "$");
 			strcat(var_mang_name, "const");
-			//printf("---%s\n",var_mang_name);
+			
 			HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
 			if(!s){
 				return 0;
@@ -380,7 +381,7 @@ const_definition :
 			if(yylval.s.floatval!=0){				
 				s->var_value.float_value = $<s.floatval>3;
 				fprintf(fptr,"%s %f\n",yylval.s.str,yylval.s.floatval);
-				// printf("%s = %f",s->var_name,s->var_value.intval);
+				//printf("%s = %s",yylval.s.str,yylval.s.type);
 			}
 			if (yylval.s.stringval != NULL){
 				fprintf(fptr,"%s %s\n",yylval.s.str,yylval.s.stringval);
@@ -391,7 +392,9 @@ const_definition :
 		}
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
-		
+		//
+		$<s.type>1 = $<s.type>3;
+		//printf("C%s %s\n",$<s.type>1, $<s.type>3);
 		printf("%s = %s\n",$<s.str>1,st[top]);
 		q[quadlen].op = (char*)malloc(sizeof(char));
     	q[quadlen].arg1 = (char*)malloc(sizeof(char)*10);
@@ -448,7 +451,7 @@ more_const_definition :
 		}
 		// printf("%s %s %d %f \n",$<s.str>2,$<s.type>2,$<s.intval>2,$<s.floatval>2); 
 		// printf("%s %s %d %f \n",$<s.str>3,$<s.type>3,$<s.intval>3,$<s.floatval>3); 
-		
+		$<s.type>1 = $<s.type>3;
 		printf("%s = %s\n",$<s.str>1,st[top]);
 		q[quadlen].op = (char*)malloc(sizeof(char));
     	q[quadlen].arg1 = (char*)malloc(sizeof(char)*10);
@@ -775,28 +778,6 @@ assignment_statements :
 			}
         }
         assignment_operators expression{codegen_assign();
-		printf("\n\nSymbol Table Current Size:%d\n",HASH_COUNT(SYMBOL_TABLE));
-
-		struct symbol_table *s;
-		int i=0;
-	    for(s=SYMBOL_TABLE,i=0; s != NULL,i<HASH_COUNT(SYMBOL_TABLE); s=s->hh.next,i++) {
-
-	    	if(strcmp(s->type,"string")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
-				}
-				else if(strcmp(s->type,"integer")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
-				}
-				else if(strcmp(s->type,"real")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10f\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.float_value );
-				}
-				else if(strcmp(s->type,"boolean")==0){
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10d\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.int_value );
-				}
-				else {
-					printf("Index : %-10d\t Identifier : %-20s\t DataType : %-20s\t ScopeLevel : %-20s\t Line_no : %-10d\t Col_no : %-10d Value:%-10s\n",i,s->var_name,s->type, s->scope_level, s->line_no, s->col_no, s->var_value.string_value );
-				}
-		}
 		}
         ;
 
@@ -859,11 +840,120 @@ expression :
 
 simpleExpression :
 		term
-		| simpleExpression '+'{push_symbol("+");} term {codegen();}
-		| simpleExpression '-'{push_symbol("-");} term {codegen();}
-		| simpleExpression T_BOOL_OR {push_symbol("||");} term {codegen();}
-		| simpleExpression '|' {push_symbol("|");}term {codegen();}
-		| simpleExpression '!' {push_symbol("!");}term {codegen();}
+		| simpleExpression '+'{push_symbol("+");} term 
+		{
+			codegen();	
+			//printf("SE%s %s\n",$<s.str>1, $<s.str>4);
+			//check_types($<s.str>1, $<s.str>4);
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+			
+		}
+		| simpleExpression '-'{push_symbol("-");} term {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+			}
+		| simpleExpression T_BOOL_OR {push_symbol("||");} term {
+			codegen();
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		
+		}
+		| simpleExpression '|' {push_symbol("|");}term {
+			codegen();
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
+		| simpleExpression '!' {push_symbol("!");}term {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
 		{
 			if(assignment_name_stack_top == -1) {
 				break;
@@ -906,12 +996,117 @@ simpleExpression :
 		;
 
 term :
-		factor	 
-		| term '*' {push_symbol("*");}factor {codegen();	printf("--%s %s\n", $<s.str>1, $<s.str>3);check_types($<s.str>1, $<s.str>3);}			
-		| term '/' {push_symbol("/");}factor {codegen();}
-		| term '%' {push_symbol("%");}factor {codegen();}
-		| term T_BOOL_AND{push_symbol("&&");} factor {codegen();}
-		| term '&' {push_symbol("&");}factor {codegen();}
+		factor	{$<s.stringval>$ = $<s.stringval>1;}
+		| term '*' {push_symbol("*");}factor {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}			
+		| term '/' {push_symbol("/");}factor {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
+		| term '%' {push_symbol("%");}factor {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
+		| term T_BOOL_AND{push_symbol("&&");} factor {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
+		| term '&' {push_symbol("&");}factor {
+			codegen();	
+			if(strcmp("const",$<s.stringval>1)==0){
+				if (strcmp("const",$<s.stringval>4)==0){
+					check_t($<s.type>1, $<s.type>4);
+				}
+				else{
+					char* t2 = get_type($<s.str>3);
+					check_t($<s.type>1, t2);
+				}
+			}
+			else if(strcmp("const",$<s.stringval>4)==0){
+				char* t1 = get_type($<s.str>1);
+				//printf("%s %s\n", t1,$<s.type>4);
+				check_t( t1,  $<s.type>4);
+			} 
+			else{
+				char* t1 = get_type($<s.str>1);
+				char* t2 = get_type($<s.str>3);
+				check_t(t1, t2);
+			}
+		}
 		{
 			if (assignment_name_stack_top == -1) {
 				break;
@@ -958,9 +1153,10 @@ factor :
 		| '+'{push_symbol("+");} factor {codegen();} 	
 		| '-'{ push_symbol("-");} factor{codegen();}
 		| T_BOOL_NOT{push_symbol("~");} factor{codegen();}
-		| value  
+		| value  { $<s.stringval>$ = $<s.stringval>1;}
 		| T_IDENTIFIER 
 		{
+			//printf("P%s %s\n", $<s.type>1, $<s.str>1);
 			write_param_count++;
 			push();
 			if(!check_valid_identifier(yylval.s.str)){
@@ -974,15 +1170,17 @@ factor :
 value :
         T_INTVAL
         {
-			printf("INTVAL%d %s\n", yylval.s.intval, $<s.stringval>-1);
 			char* check = $<s.stringval>-1;
+			//printf("%s\n", check);
+			char* check2 = $<s.stringval>1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else if (!check)
+			else if ((strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
 			{
+				
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
 				strcpy(var_mang_name, assignment_name_stack[assignment_name_stack_top]);
@@ -991,6 +1189,7 @@ value :
 				HASH_FIND_STR(SYMBOL_TABLE, var_mang_name, s);
 				if(s)
 				{
+					
 					struct symbol_table *temp = NULL;
 					struct symbol_table *r = NULL;
 					temp = malloc(sizeof(struct symbol_table));
@@ -999,7 +1198,12 @@ value :
 					temp->scope_level = s->scope_level;
 					temp->line_no = s->line_no;
 					temp->col_no = s->col_no;
-					temp->var_value.int_value = yylval.s.intval;
+					if(strcmp(s->type, "real")==0){
+						temp->var_value.float_value = yylval.s.intval;
+					}
+					else{
+						temp->var_value.int_value = yylval.s.intval;
+					}
 					HASH_REPLACE_STR( SYMBOL_TABLE, var_name, temp,r );  /* var_name: name of key field */
 					assignment_name_stack[assignment_name_stack_top--] = NULL;
 				}
@@ -1015,12 +1219,13 @@ value :
         | T_FLOATVAL
         {
 			char* check = $<s.stringval>-1;
+			char* check2 = $<s.stringval>1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else if (!check)
+			else if ((strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1049,18 +1254,18 @@ value :
 					yyerror(error);
 				}
 			}
-			$<s.floatval>$ = $1;
 
         }
         | T_BOOLVAL
         {
 			char* check = $<s.stringval>-1;
+			char* check2 = $<s.stringval>1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else if (!check)
+			else if ((strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1089,17 +1294,17 @@ value :
 					
 				}
 			}
-			$<s.intval>$ = $1;
         }
         | T_STRINGVAL
         {
 			char* check = $<s.stringval>-1;
+			char* check2 = $<s.stringval>1;
 			write_param_count++;
 			push_value(yylval.s.type);
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else if (!check)
+			else if ((strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1127,7 +1332,6 @@ value :
 					yyerror(error);
 				}
 			}
-			$<s.str>$ = $1;
         }
         ;
 
@@ -1272,8 +1476,29 @@ double time_elapsed(struct timespec *start, struct timespec *end) {
 	return t;
 }
 
-void check_types(char* op1, char* op2)
+char* get_type(char* op1){
+	struct symbol_table *s1 = NULL;
+	char var_mang_name1[31];
+	strcpy(var_mang_name1, op1);
+	strcat(var_mang_name1, "$");
+	strcat(var_mang_name1, curr_scope_level);
+	HASH_FIND_STR(SYMBOL_TABLE, var_mang_name1, s1);
+	if(s1){
+		return s1->type;
+	}
+	else{
+		strcpy(var_mang_name1, op1);
+		strcat(var_mang_name1, "$");
+		strcat(var_mang_name1, "const");
+		HASH_FIND_STR(SYMBOL_TABLE, var_mang_name1, s1);
+		if(s1){
+			return s1->type;
+		}
+	}
+}
+/*void check_types(char* op1, char* op2)
 {
+	printf("Types%s %s\n", op1, op2);
 	struct symbol_table *s1 = NULL;	
 	struct symbol_table *s2 = NULL;	
 	char var_mang_name1[31];
@@ -1289,7 +1514,7 @@ void check_types(char* op1, char* op2)
 	// check if both symbols are present in the symbol table
 	//printf("%s %s",s1->type,s2->type);
 	if (s1 && s2){
-		 printf("A%s %s",s1->type,s2->type);
+		printf("A%s %s",s1->type,s2->type);
 		if (strcmp(s1->type, s2->type) !=0)
 		{
 		
@@ -1300,31 +1525,67 @@ void check_types(char* op1, char* op2)
 			}
 
 			if (strcmp(s1->type,"integer")==0 && strcmp(s2->type,"real")==0){
-				printf("Warning: Adding 2 integers, typecasting 1st number\n");
+				printf("Warning: Integer type and Real type, typecasting 1st number\n");
 				
 			}
 
 			if (strcmp(s1->type,"real")==0 && strcmp(s2->type,"integer")==0){
-				printf("Warning: Adding 2 integers, typecasting 2st number\n");
+				printf("Warning: Real type and Integer type, typecasting 2st number\n");
 				
 			}
 			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"boolean")==0) || (strcmp(s1->type,"boolean")==0 && strcmp(s2->type,"integer")==0) ){
 				// printf("Adding 2 integers, typecasting 2st number\n");
 				// printf("Cannot add int and boolean, aborting\n");	
-				yyerror("Warning: Cannot add int and boolean, aborting\n\n");	
+				yyerror("Warning: Cannot operate int and boolean, aborting\n\n");	
 			}
 
 			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"string")==0) || (strcmp(s1->type,"string")==0 && strcmp(s2->type,"int")==0) ){
 				// printf("Adding 2 integers, typecasting 2st number\n");
 				// printf("Cannot add int and boolean, aborting\n");	
-				yyerror("Warning: Cannot add int and string, aborting\n\n");	
+				yyerror("Warning: Cannot operate int and string, aborting\n\n");	
 			}
 			}
 			else{
 			yyerror("Abort: Incompatible Datatypes.");
 		}
 	}
+	//else if(strcmp("const",$<s.stringval>1)==0){
+
+	//}
+}*/
+
+void check_t(char* t1, char* t2){
+	//printf("IN CHECK_T%s %s\n", t1,t2);
+	if (strcmp(t1,"integer")==0 && strcmp(t2,"integer")==0){
+		//printf("Adding 2 integers\n");
+	}
+	else if (strcmp(t1,"real")==0 && strcmp(t2,"real")==0){
+		//printf("Adding 2 integers\n");
+	}
+	else if (strcmp(t1,"integer")==0 && strcmp(t2,"real")==0){
+		printf("Warning: Integer type and Real type, typecasting 1st number\n");
+		
+	}
+
+	else if (strcmp(t1,"real")==0 && strcmp(t2,"integer")==0){
+		printf("Warning: Real type and Integer type, typecasting 2st number\n");
+		
+	}
+	else if ((strcmp(t1,"integer")==0 && strcmp(t2,"boolean")==0) || (strcmp(t1,"boolean")==0 && strcmp(t2,"integer")==0) ){
+		// printf("Adding 2 integers, typecasting 2st number\n");
+		// printf("Cannot add int and boolean, aborting\n");	
+		yyerror("Warning: Cannot operate int and boolean, aborting\n\n");	
+	}
+
+	else if ((strcmp(t1,"integer")==0 && strcmp(t2,"string")==0) || (strcmp(t1,"string")==0 && strcmp(t2,"int")==0) ){
+		// printf("Adding 2 integers, typecasting 2st number\n");
+		// printf("Cannot add int and boolean, aborting\n");	
+		yyerror("Warning: Cannot operate int and string, aborting\n\n");	
+	}
 	
+	else{
+		yyerror("Abort: Incompatible Datatypes.");
+	}
 }
 
 void push()

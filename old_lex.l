@@ -77,8 +77,8 @@ single_eq	=
 single_char_op	<|>|\+|\*|-|\/|\%|\&|\||\!|\~
 multiple_char_op	and|or|not|<<|>>|<>|>=|<=|:=|\+=|\*=|-=|\/=
 paranthesis	\(|\)|\[|\]
-floatval [-+]?{digits}((\.{digits})|([Ee][-+]?{digits}))
 intval [-+]?{digits}
+floatval [-+]?{digits}((\.{digits})|([Ee][-+]?{digits}))
 boolval true|false
 stringval \'.*\'
 datatypes integer|character|real|boolean|string
@@ -115,14 +115,14 @@ procedure		{ ;  return T_PROCEDURE;}
 {intval}		{ ;
 	yylval.s.intval = atoi(yytext);
 	yylval.s.type = strdup("integer");
-	
+	yylval.s.stringval = strdup("const");
 	return T_INTVAL;
 }
 
 {floatval} 		{ ;
 	yylval.s.floatval = myatof(yytext);
-	yylval.s.type = strdup("float");
-	
+	yylval.s.type = strdup("real");
+	yylval.s.stringval = strdup("const");
 	return T_FLOATVAL;
 }
 
@@ -134,6 +134,7 @@ procedure		{ ;  return T_PROCEDURE;}
 		yylval.s.intval = 0;
 	
 	yylval.s.type = strdup("boolean");
+	yylval.s.stringval = strdup("const");
 	return T_BOOLVAL;
 }
 
@@ -144,6 +145,7 @@ procedure		{ ;  return T_PROCEDURE;}
 	temp[yyleng-2] = '\0';
 	yylval.s.str = strdup(temp);
 	yylval.s.type = strdup("string");
+	yylval.s.stringval = strdup("const");
 	//printf("%s %s ",temp, yylval.s.str);
 	
 	return T_STRINGVAL;
@@ -179,12 +181,13 @@ writeln			{ ; return T_PROCALL;}
 	char temp[32];
 	strncpy(temp,yytext,31);
 	yylval.s.str = strdup(temp);
-	
+	yylval.s.stringval = "\0";
 	return T_IDENTIFIER;
 }
 
 {single_char_op}   {
 	 ;
+	yylval.s.stringval =  strdup(yytext);
 	return yytext[0];
 }
 
