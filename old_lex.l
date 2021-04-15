@@ -80,7 +80,7 @@ paranthesis	\(|\)|\[|\]
 intval [-+]?{digits}
 floatval [-+]?{digits}((\.{digits})|([Ee][-+]?{digits}))
 boolval true|false
-stringval \'.*\'
+stringval \'(\\.|[^'\\])*\'
 datatypes integer|character|real|boolean|string
 punctuation ;|,|:|\.
 indextype [0-9]\.\.\.[0-9]+
@@ -141,12 +141,11 @@ procedure		{ ;  return T_PROCEDURE;}
 {stringval}		{
 	 ;
 	char temp[yyleng];
-	strncpy(temp, yytext+1, yyleng-2);
-	temp[yyleng-2] = '\0';
+	strncpy(temp, yytext, yyleng);
+	temp[yyleng] = '\0';
 	yylval.s.str = strdup(temp);
 	yylval.s.type = strdup("string");
 	yylval.s.stringval = strdup("const");
-	//printf("%s %s ",temp, yylval.s.str);
 	
 	return T_STRINGVAL;
 }
@@ -166,7 +165,7 @@ readln			;
 readkey			;
 write			{ ; return T_PROCALL;}
 writeln			{ ; return T_PROCALL;}
-[\t|' ']+		;
+[\t| " "]+		;
 
 {datatypes} 	{  ;
 	yylval.s.type = strdup(yytext);
