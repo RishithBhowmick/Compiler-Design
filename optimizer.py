@@ -6,6 +6,17 @@
 # For jump format is jmp label_name
 import copy
 import sys
+import re
+
+
+def is_real_num(number):
+    if number.isnumeric():
+        return True
+    elif re.match(r"\d+\.*\d*", number) pr re.match(r"-\d+\.*\d*", number):
+        return True
+    else:
+        return False
+
 
 class TACLabel(object):
     def __init__(self, label):
@@ -34,57 +45,97 @@ class TACBt(object):
 
 class TACPlus(object):
     def __init__(self, op1, op2, result):
-        self.op1 = op1
-        self.op2 = op2
+        self.op = '+'
+        self.args = []
+        self.args.append(op1)
+        self.args.append(op2)
         self.result = result
     def __str__(self):
-        return '+ ' + str(self.op1) + ' ' + str(self.op2) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACMinus(object):
     def __init__(self, op1, op2, result):
-        self.op1 = op1
-        self.op2 = op2
+        self.op = '-'
+        self.args = []
+        self.args.append(op1)
+        self.args.append(op2)
         self.result = result
     def __str__(self):
-        return '- ' + str(self.op1) + ' ' + str(self.op2) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACMul(object):
     def __init__(self, op1, op2, result):
-        self.op1 = op1
-        self.op2 = op2
+        self.op = '*'
+        self.args = []
+        self.args.append(op1)
+        self.args.append(op2)
         self.result = result
     def __str__(self):
-        return '* ' + str(self.op1) + ' ' + str(self.op2) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACDiv(object):
     def __init__(self, op1, op2, result):
-        self.op1 = op1
-        self.op2 = op2
+        self.op = '/'
+        self.args = []
+        self.args.append(op1)
+        self.args.append(op2)
         self.result = result
     def __str__(self):
-        return '/ ' + str(self.op1) + ' ' + str(self.op2) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACMod(object):
     def __init__(self, op1, op2, result):
-        self.op1 = op1
-        self.op2 = op2
+        self.op = '%'
+        self.args = []
+        self.args.append(op1)
+        self.args.append(op2)
         self.result = result
     def __str__(self):
-        return '% ' + str(self.op1) + ' ' + str(self.op2) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACAssign(object):
-    def __init__(self, op, result):
-        self.op = op
+    def __init__(self, op1, result):
+        self.op = '='
+        sefl.args = []
+        self.args.append(op1)
         self.result = result
+        self.is_const = is_real_num(self.op1)
     def __str__(self):
-        return ':= ' + str(self.op) + ' ' + str(self.result)
+        string_to_ret = str(self.op) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        string_to_ret += str(self.result)
+        return string_to_ret
 
 class TACFun(object):
     def __init__(self, label, args):
         self.label = label
         self.args = args
     def __str__(self):
-        return str(self.label) + ' ' + str(self.args)
+        string_to_ret = str(self.label) + ' '
+        for i in self.args:
+            string_to_ret += str(i) + ' '
+        return string_to_ret
 
 class TACBasicBlock(object):
     def __init__(self, instructions):
@@ -103,6 +154,24 @@ class TACBasicBlock(object):
             s += str(index) + '. ' + str(item) + '\n'
         s += 'Children : ' + str([child.label for child in self.children]) + '\n'
         return s
+
+class Numbering(dict):
+    # A dict mapping anything to numbers that can generate new numbers
+    # that table in LVN algo
+    def __init__(self, init={}):
+        super(Numbering, self).__init__(init)
+        self._next_fresh = 0
+    
+    def _fresh(self):
+        n = self._next_fresh
+        self._next_fresh = n + 1
+        return n
+    
+    def add(self, key):
+        # Associate the key with a new, fresh number and return it. If the value is already in the map, it is overwritten
+        n = self.fresh()
+        self[key] = n
+        return n
 
 
 def make_bbs(inst):
@@ -134,14 +203,14 @@ def create_CFG(code):
     inst_list = []
     for tacinst in code:
         inst = tacinst.split(',')
-        if inst[0] == 'label':
-            label = inst[1].strip()
+        if inst[0] == 'Label':
+            label = inst[-1].strip()
             inst_list.append(TACLabel(label))
-        elif inst[0] == 'jmp':
-            label = inst[1].strip()
+        elif inst[0] == 'goto':
+            label = inst[-1].strip()
             inst_list.append(TACJmp(label))
         elif inst[0] == 'return':
-            label = inst[1].strip()
+            label = inst[-1].strip()
             inst_list.append(TACRet(label))
         elif inst[0] == 'bt':
             mybool = inst[1].strip()
@@ -173,14 +242,14 @@ def create_CFG(code):
                 op1 = inst[1].strip()
                 op2 = inst[2].strip()
                 inst_list.append(TACMod(op1, op2, assignee))
-            else:
+            elif inst[0] == '=':
                 assignee = inst[3].strip()
                 op = inst[1].strip()
                 inst_list.append(TACAssign(op, assignee))
         else:
             label = inst[0].strip()
-            arg = inst[1].strip()
-            inst_list.append(TACFun(label, arg))
+            args = [ins.strip() for ins in inst[1:]]
+            inst_list.append(TACFun(label, args))
     # global dead code elimination before makinig it into basic blocks
     instructions = global_dead_code_elimination(inst_list)
     basic_blocks = make_bbs(instructions)
@@ -197,11 +266,8 @@ def basic_dead_code_elimination(code):
     used = set()
     for instr in code:
         if hasattr(instr, 'args'):
-            used.add(instr.args)
-        if hasattr(instr, 'op1'):
-            used.add(instr.op1)
-        if hasattr(instr, 'op2'):
-            used.add(instr.op2)
+            for i in instr.args:
+                used.add(i)
     for instr in code:
         if hasattr(instr, 'result') and instr.result not in used:
             code.remove(instr)
@@ -249,12 +315,10 @@ def local_dead_code_elimination(basic_blocks):
             # if instr.dest in last_def
             #   del last_def[instr.dest]
             #   last_def[instr.dest] = instr
-            if hasattr(instr, 'args') and instr.args in last_def:
-                del last_def[instr.args]
-            if hasattr(instr, 'op1') and instr.op1 in last_def:
-                del last_def[instr.op1]
-            if hasattr(instr, 'op2') and instr.op2 in last_def:
-                del last_def[instr.op2]
+            if hasattr(instr, 'args'):
+                for i in instr.args:
+                    if i in last_def:
+                        del last_def[i]
             if hasattr(instr, 'result') and instr.result in last_def:
                 del last_def[instr.result]
                 last_def[instr.result] = instr
@@ -281,13 +345,61 @@ def dead_code_elimination(code):
     return opt_basic_blocks
 
 
-def local_value_numbering(basic_block):
+def read_before_write(block):
+    read_set = set()
+    write_set = set()
+
+    for instr in block.instructions:
+        if hasattr(instr, 'args'):
+            read.update(set(instr.args) - write_set)
+            if hasattr(instr, 'result'):
+                write_set.add(instr.result)
+    return read_set
+
+
+def last_writes(block):
+    # returns a boolean that indicates whether the last instruction was a write for the variable or not
+    last_write = [False] * len(block.instructions)
+    encountered = set()
+    for index, instr in reversed(list(enumerate(block.instructions))):
+        if hasattr(instr, 'result'):
+            result = instr.result
+            if result not in encountered:
+                last_write[index] = True
+                encountered.add(instr.result)
+    return last_write
+
+
+def local_value_numbering_block(block):
+    # main table. Update each time a variable is modified
+    var2num = Numbering()
+
+    # New value calculated stored here
+    value2num = {}
+
+    # The "cloud"
+    num2var = {}
+
+    # track constants
+    num2const = {}
+
+    # variables that are read before they are written
+    if hasattr(block.instructions, 'args'):
+        for var in read_before_write(block.instructions.args):
+            num = var2num.add(var)
+            num2var[num] = var
+        
+        for instr, last_write in zip(block.instructions, last_writes(block)):
+            
+
+
+def local_value_numbering(basic_blocks):
     # table = mapping from value tuples to avoid canonical variables, with each row numbered
     # var2num = mapping from variable names to their current row in the table
     # for instr in basic_block.instructions:
     #    value = (instr.op, var2num[instr.args[0]], ...)
     #    if value in table:
-    #        // reuse the value that has been computed before
+    #        # // reuse the value that has been computed before
     #        num, var = table[value]
     #        replace instr with copy of var
     #    else:
@@ -302,6 +414,10 @@ def local_value_numbering(basic_block):
     #        for a in instr.args:
     #            replace a with table[var2num[a]].var
     #    var2num[instr.dest] = num
+
+    for bb in basic_blocks:
+        local_value_numbering_block(bb)
+    return basic_block
 
 
 def common_sub_exp_elimination(code):
