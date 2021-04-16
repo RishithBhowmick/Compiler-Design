@@ -4,4 +4,5 @@ label,,,start
 =,20,,c
 +,a,b,d
 +,c,d,e
-print,d,,
+param,d,,
+call,print,1,t1
