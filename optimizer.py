@@ -793,6 +793,16 @@ def local_value_numbering(basic_blocks):
 
 
 def loop_opt(code):
+    # Mark "invariant" those statements whose operands are either
+    #   - constant
+    #   - have all reaching definitions outside of L
+    # Repeat until a fixed point is reached: mark "invariant" those unmarked statements whose operands are either 
+    #   - constant
+    #   - have all reaching definitions outside of L
+    #   - have exactly one reaching definition and that definition is in the set marked "invariant"
+
+    # First: Identify a loop
+    
     return code
 
 
