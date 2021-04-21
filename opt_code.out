@@ -1,0 +1,4 @@
+label start
+= 10 a
+= a b
+t0 = print(10)

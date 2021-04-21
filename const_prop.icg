@@ -1,0 +1,5 @@
+label null null start
+= 10 null a
+= a null b
+param b null null
+call print 1 t0

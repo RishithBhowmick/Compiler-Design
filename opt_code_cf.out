@@ -1,0 +1,2 @@
+label start
+t1 = print(24)
