@@ -16,12 +16,13 @@ begin
    c := 1.0;
    e := False;
    if color = 1 then
-      if color = 2 then
-            c := c + 1
-         else
             c := c + 2
    else
-   c := c + 3;        
+      c := c + 3;        
+   for a := 10  to 20 do
+   begin
+      writeln('value of r: ', r);
+   end;
    d := r * 2;
    {r :=  PI * d;}
    {e := e + 0;}

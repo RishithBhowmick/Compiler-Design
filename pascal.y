@@ -553,7 +553,7 @@ decl_stmts :
             var_name_stack_top++;
 			var_name_stack[var_name_stack_top] = strdup(yylval.s.str);
         }
-        more_decl_stmt ':' data_type ';' decl_stmts
+        more_decl_stmt ':' data_type  ';' decl_stmts 
         | error ';'
 		|
         ;
@@ -785,14 +785,14 @@ assignment_statements :
         }
         assignment_operators expression{
 			codegen_assign();
-			printf("l%d\n",l);
+			//printf("l%d\n",l);
 			//printf("A%s\n", $<s.str>1);
 			if(l == 1){
 				// printf("A%s\n", $<s.type>4);
 				type_stack_top++;
 				type_stack[type_stack_top] = strdup($<s.type>4);
 			}
-			printf("Assign%s",type_stack[type_stack_top]);
+			//printf("Assign%s",type_stack[type_stack_top]);
 			check_assign(get_type($<s.str>1), type_stack[type_stack_top--]);			
 			l=0;
 		}
@@ -1780,6 +1780,7 @@ void for2()
     quadlen++;
     label[++ltop]=lnum;
     printf("L%d: \n",++lnum);
+
     q[quadlen].op = (char*)malloc(sizeof(char)*6);
     q[quadlen].arg1 = NULL;
     q[quadlen].arg2 = NULL;
@@ -1985,19 +1986,47 @@ void if3()
     char l[]="L";
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
+	++lnum;
 }
 
 void write_params(int n){
 	for(int i=0;i<n;i++){
-		printf("param %s\n",st[top]);
-		q[quadlen].op = (char*)malloc(sizeof(char)*10);
-		q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
-		q[quadlen].arg2 = NULL;
-		q[quadlen].res = NULL;
-		strcpy(q[quadlen].op,"param");
-		strcpy(q[quadlen].arg1,st[top]);
-		quadlen++;
-		top--;
+		if (st[top][0] != '\''){
+			printf("param %s\n",st[top]);
+			q[quadlen].op = (char*)malloc(sizeof(char)*10);
+			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
+			q[quadlen].arg2 = NULL;
+			q[quadlen].res = NULL;
+			strcpy(q[quadlen].op,"param");
+			strcpy(q[quadlen].arg1,st[top]);
+			quadlen++;
+			top--;
+		}
+		else{
+			strcpy(temp,"T");
+   			sprintf(tmp_i, "%d", temp_i);
+    		strcat(temp,tmp_i);
+			printf("%s = %s \n",temp,st[top]);
+			q[quadlen].op = (char*)malloc(sizeof(char));
+			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
+			q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
+			strcpy(q[quadlen].op, "=");
+			strcpy(q[quadlen].arg1,st[top]);
+			strcpy(q[quadlen].res,temp);
+			quadlen++;
+			
+			strcpy(st[top],temp);	
+			temp_i++;
+			printf("param %s\n",st[top]);
+			q[quadlen].op = (char*)malloc(sizeof(char)*10);
+			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
+			q[quadlen].arg2 = NULL;
+			q[quadlen].res = NULL;
+			strcpy(q[quadlen].op,"param");
+			strcpy(q[quadlen].arg1,st[top]);
+			quadlen++;
+			top-=1;
+		}
 	}
 
 	
