@@ -83,7 +83,8 @@ boolval true|false
 stringval \'(\\.|[^'\\])*\'
 datatypes integer|character|real|boolean|string
 punctuation ;|,|:|\.
-indextype [0-9]\.\.\.[0-9]+
+indextype [0-9]\.\.[0-9]+
+double_quotes "
 
 
 %%
@@ -111,7 +112,7 @@ end 			{ ;  return T_END;}
 function		{ ;  return T_FUNCTION;}
 procedure		{ ;  return T_PROCEDURE;}
 
-{indextype}		{ ; return T_INDEXTYPE;}
+{indextype}		{ return T_INDEXTYPE;}
 {intval}		{ ;
 	yylval.s.intval = atoi(yytext);
 	yylval.s.type = strdup("integer");
@@ -150,7 +151,7 @@ procedure		{ ;  return T_PROCEDURE;}
 	return T_STRINGVAL;
 }
 
-array			{ ; return T_ARRAY;}
+array			{ return T_ARRAY;}
 of 				{ ; return T_OF;}
 const 			{ ; return T_CONST;}
 if				{ ; return T_IF;}
