@@ -1,8 +1,0 @@
-label,,,start
-=,9,,a
-=,15,,b
-=,20,,c
-+,a,b,d
-+,c,d,e
-param,d,,
-call,print,1,t1
