@@ -22,6 +22,7 @@
 	char* get_type(char* op1);
 	//void check_types(char* op1, char* op2);
 	void check_t(char* t1, char* t2);
+	void check_assign(char* t1, char* t2);
 	void push();
 	void push_symbol(char* symbol);
 	void push_value(char* type);
@@ -37,11 +38,15 @@
 	void codegen_assigna();
 	void call_function();
 	void write_params(int n);
+	int l = 0;
+	int in_write = 0;
 	FILE *fptr;
 	char *var_name_stack[100];
 	int var_name_stack_top = -1;
 	char *assignment_name_stack[31];
 	int assignment_name_stack_top = -1;
+	char *type_stack[100];
+	int type_stack_top = -1;
 	int write_param_count;
 	char *curr_scope_level = "global";
 	//char** ops = ["+", "-", "*", "/"];
@@ -736,7 +741,7 @@ statementList :
 
 statements :
 		execution_block
-		| assignment_statements	
+		| {l = 0;}assignment_statements	
         | if_statement 
         | fordo_statement
         | procedure_call_statements
@@ -748,10 +753,11 @@ procedure_call_statements:
 		;
 
 actuals :
-		'(' {write_param_count = 0;}
+		'(' {in_write = 1;	write_param_count = 0;}
 		expressionList
 		{
 			write_params(write_param_count);
+			in_write = 0;
 		} ')' 
 		|
 		;
@@ -777,21 +783,32 @@ assignment_statements :
 				assignment_name_stack[assignment_name_stack_top] = strdup(yylval.s.str);
 			}
         }
-        assignment_operators expression{codegen_assign();
+        assignment_operators expression{
+			codegen_assign();
+			printf("l%d\n",l);
+			//printf("A%s\n", $<s.str>1);
+			if(l == 1){
+				// printf("A%s\n", $<s.type>4);
+				type_stack_top++;
+				type_stack[type_stack_top] = strdup($<s.type>4);
+			}
+			printf("Assign%s",type_stack[type_stack_top]);
+			check_assign(get_type($<s.str>1), type_stack[type_stack_top--]);			
+			l=0;
 		}
         ;
 
 expression :
         simpleExpression
 		{
+			//printf("Assignment operation %s = %s\n",$<s.str>1,$<s.str>$);
 			// $<s.type>$ = $<s.type>1;
 			// $<s.intval>$ = $<s.intval>1;	
 			// $<s.floatval>$ = $<s.floatval>1;	
-			// $<s.stringval>$ = $<s.stringval>1;	
-			
-			// printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
+			// $<s.str>$ = $<s.str>1;	
+			//printf("Assignment operation %s = %s\n",$<s.str>$,$<s.str>0);
 		}
-        | simpleExpression T_SINGLEEQ{	push_symbol("=");} simpleExpression{codegen_assigna();}
+        | simpleExpression T_SINGLEEQ{	push_symbol("==");} simpleExpression{codegen_assigna();}
 		| simpleExpression T_NE  {	push_symbol("<>");}simpleExpression {codegen_assigna();}
 		| simpleExpression '<' {push_symbol("<");} simpleExpression {codegen_assigna();}
 		| simpleExpression T_LE {push_symbol("<=");} simpleExpression {codegen_assigna();}
@@ -839,7 +856,7 @@ expression :
         ;
 
 simpleExpression :
-		term
+		term 
 		| simpleExpression '+'{push_symbol("+");} term 
 		{
 			codegen();	
@@ -1153,9 +1170,10 @@ factor :
 		| '+'{push_symbol("+");} factor {codegen();} 	
 		| '-'{ push_symbol("-");} factor{codegen();}
 		| T_BOOL_NOT{push_symbol("~");} factor{codegen();}
-		| value  { $<s.stringval>$ = $<s.stringval>1;}
+		| value  { l += 1; $<s.stringval>$ = $<s.stringval>1;}
 		| T_IDENTIFIER 
 		{
+			l += 1;
 			//printf("P%s %s\n", $<s.type>1, $<s.str>1);
 			write_param_count++;
 			push();
@@ -1304,7 +1322,7 @@ value :
 			if(assignment_name_stack_top == -1) {
 				break;
 			}
-			else if ((strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
+			else if (!in_write && (strcmp(check,"\0")==0 || strcmp(check,"const")==0)&& strcmp(check2,"const")==0 )
 			{
 				struct symbol_table *s = NULL;
 				char var_mang_name[31];
@@ -1316,6 +1334,7 @@ value :
 				{
 					struct symbol_table *temp = NULL;
 					struct symbol_table *r = NULL;
+					//printf("A%s\n", yylval.s.str);
 					temp = malloc(sizeof(struct symbol_table));
 					strcat(temp->var_name, var_mang_name);
 					strcpy(temp->type, s->type);
@@ -1557,17 +1576,34 @@ char* get_type(char* op1){
 void check_t(char* t1, char* t2){
 	//printf("IN CHECK_T%s %s\n", t1,t2);
 	if (strcmp(t1,"integer")==0 && strcmp(t2,"integer")==0){
+		
+		type_stack_top++;
+		type_stack[type_stack_top] = strdup(t1);
 		//printf("Adding 2 integers\n");
 	}
 	else if (strcmp(t1,"real")==0 && strcmp(t2,"real")==0){
+		
+		type_stack_top++;
+		type_stack[type_stack_top] = strdup(t1);
+		//printf("Adding 2 integers\n");
+	}
+	else if (strcmp(t1,"string")==0 && strcmp(t2,"string")==0){
+		type_stack_top++;
+		type_stack[type_stack_top] = strdup(t1);
 		//printf("Adding 2 integers\n");
 	}
 	else if (strcmp(t1,"integer")==0 && strcmp(t2,"real")==0){
+		
+		type_stack_top++;
+		type_stack[type_stack_top] = strdup(t2);
 		printf("Warning: Integer type and Real type, typecasting 1st number\n");
 		
 	}
 
 	else if (strcmp(t1,"real")==0 && strcmp(t2,"integer")==0){
+		
+		type_stack_top++;
+		type_stack[type_stack_top] = strdup(t1);
 		printf("Warning: Real type and Integer type, typecasting 2st number\n");
 		
 	}
@@ -1586,6 +1622,44 @@ void check_t(char* t1, char* t2){
 	else{
 		yyerror("Abort: Incompatible Datatypes.");
 	}
+}
+
+void check_assign(char* t1, char* t2)
+{
+	if (strcmp(t1,"integer")==0 && strcmp(t2,"integer")==0){
+		
+	}
+	else if (strcmp(t1,"real")==0 && strcmp(t2,"real")==0){
+		
+	}
+	else if (strcmp(t1,"string")==0 && strcmp(t2,"string")==0){
+		
+	}
+	else if (strcmp(t1,"boolean")==0 && strcmp(t2,"boolean")==0){
+		
+	}
+	else if (strcmp(t1,"integer")==0 && strcmp(t2,"real")==0){
+		yyerror("Abort: Incompatible Datatypes. Expecting integer got real\n\n");
+	}
+
+	else if (strcmp(t1,"real")==0 && strcmp(t2,"integer")==0){
+		printf("Warning: Real type and Integer type, typecasting 2st number\n\n");
+		
+	}
+	else if (strcmp(t1,"integer")==0 && strcmp(t2,"boolean")==0){
+		yyerror("Abort: Incompatible Datatypes.Expecting boolean got integer\n\n");	
+	}
+	else if (strcmp(t1,"boolean")==0 && strcmp(t2,"integer")==0){
+		yyerror("Abort: Incompatible Datatypes.Expecting integer got boolean\n\n");	
+	}
+	else if ((strcmp(t1,"integer")==0 && strcmp(t2,"string")==0) || (strcmp(t1,"string")==0 && strcmp(t2,"int")==0) ){
+		// printf("Adding 2 integers, typecasting 2st number\n");
+		// printf("Cannot add int and boolean, aborting\n");	
+		yyerror("Abort: Incompatible Datatypes. Cannot operate on integer and string\n\n");	
+	}
+	else{
+		yyerror("Abort: Incompatible Datatypes.");
+	}	
 }
 
 void push()
