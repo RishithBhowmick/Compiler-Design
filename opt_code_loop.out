@@ -1,12 +1,12 @@
-label start
+label s0
 = 10 a
-label INVARIANTS
+label I0
 = 25 b
-= T2 a
 label L0
 > a 20 T0
 bt T0 L3
 + a 1 T2
 = T2 a
+jmp L0
 label L3
 T3 = print(T2, a, b)

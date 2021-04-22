@@ -691,36 +691,28 @@ def local_value_numbering_block(block):
 
         val = None
         if hasattr(instr, 'result') and hasattr(instr, 'args') and not isinstance(instr, TACFun) :
-            print("1", instr)
             val = canonicalize(Value(instr.op, argnums))
 
             num = lookup(value2num, val)
             arguments = val.args
             if num is not None:
-                print("2", val)
                 var2num[instr.result] = num
                 # constant propagation
                 if num in num2const:
                     new_instr = TACConst(num2const[num], instr.result)
                     instr = new_instr
-                    print("instr")
 
                 else:
-                    print(instr, type(instr))
-                    print(var2num)
-                    print(num2var)
                     new_instr = TACAssign(num2var[num], instr.result)
                     instr = new_instr
                     instr.op = '='
                     instr.args = [num2var[num]]
                 continue
             else:
-                print("num2var")
                 if arguments[0] in num2var:
                     instr.args[0] = num2var[arguments[0]]
                 if len(arguments) > 1 and arguments[1] in num2var:
                     instr.args[1] = num2var[arguments[1]]
-                print(arguments, num2var, var2num)
         
         if hasattr(instr, 'result'):
             newnum = var2num.add(instr.result)
@@ -736,29 +728,25 @@ def local_value_numbering_block(block):
             num2var[newnum] = var
 
             instr.result = var
-            print("val", val)
             if val is not None:
                 # constant folding
                 if len(val.args) > 1 and (any([i.isalpha() for i in num2var[val.args[0]]]) or any([i.isalpha() for i in num2var[val.args[1]]])):
-                    print("here1")
                     pass
                 elif len(val.args) == 1 and any([i.isalpha() for i in num2var[val.args[0]]]):
-                    print("here3")
                     pass
                 else:
-                    print("here")
                     const = fold(num2var, val)
                     print(const)
                     if const is not None:
                         num2var[newnum] = const
                         new_instr = TACConst(const, instr.result)
                         instr = new_instr
-                        # print(instr)
                         continue
                 value2num[val] = newnum
 
         if hasattr(instr, 'args'):
             instr.args = [num2var[n] for n in argnums]
+        print(var2num)
 
 
 def lookup(value2num, val):
@@ -859,7 +847,6 @@ def loop_instr(basic_blocks):
         else:
             encountered.add(to_visit[0].label)
         completed = to_visit.pop(0)
-        print(completed)
         i = 0
         if len(completed.children) == 0 and not ex:
             for bb in copy_bbs:
@@ -892,12 +879,15 @@ def loop_opt(basic_blocks):
     # First: Identify a loop
     loop_tacs = loop_instr(basic_blocks)
     print(loop_tacs)
-    loop_invariant_instrs = [TACLabel("INVARIANTS")]
+    loop_invariant_instrs = [TACLabel("I0")]
     for bb in loop_tacs:
         i = 0
         instructions = copy.deepcopy(bb.instructions)
         for instr in instructions:
             if hasattr(instr, 'op') and (instr.op == 'const' or instr.op == 'id' or instr.op == '='):
+                if instr.op == '=':
+                    if any([i.isalpha() for i in instr.args[0]]):
+                        continue
                 loop_invariant_instrs.append(instr)
                 bb.instructions.pop(i)
             i += 1
@@ -910,14 +900,14 @@ def loop_opt(basic_blocks):
             index += 1
         basic_blocks.insert(index, newblock)
         if index > 0:
-            basic_blocks[index].parents += basic_blocks[index - 1].label
-            basic_blocks[index - 1].children += newblock.label
+            basic_blocks[index].parents.append(basic_blocks[index - 1])
+            basic_blocks[index - 1].children.append(newblock)
             # basic_blocks[index - 1].child_labels += newblock.label
         if index < (len(basic_blocks) - 1):
-            basic_blocks[index].children += basic_blocks[index + 1].label
+            basic_blocks[index].children.append(basic_blocks[index + 1])
             for parent in basic_blocks[index + 2].parents:
-                if parent == basic_blocks[index].label:
-                    parent = basic_blocks[index + 1].label
+                if parent.label == basic_blocks[index].label:
+                    parent.label = basic_blocks[index + 1].label
     return basic_blocks
 
 
@@ -946,9 +936,14 @@ if __name__ == "__main__":
     if file_name == 'loop.icg':
         with open(file_name, "r") as file:
             code = file.readlines()
+            print("-------------Before Optimization------------------")
+            for i in code:
+                print(i.strip())
             code = create_CFG(code)
             code = loop_opt(code)
-            print("Loop optimization complete")
+            print("----------------Loop optimization complete-----------")
+            for bb in code:
+                print(bb)
             with open("opt_code_loop.out", "w") as file:
                 sys.stdout = file
                 for bb in code:
@@ -956,12 +951,19 @@ if __name__ == "__main__":
     elif file_name == 'const_fold.icg':
         with open(file_name, "r") as file:
             code = file.readlines()
+            print("-------------Before Optimization------------------")
+            for i in code:
+                print(i.strip())
             code = create_CFG(code)
-            print("Dead code elimination complete")
             # LVN performs common subexpression elimination, constant folding and constant propagation
             code = local_value_numbering(code)
-            print("Constant folding and propagation complete")
+            print("-------------Constant folding and propagation complete------------")
+            for bb in code:
+                print(bb)
             code = final_dead_code_elimination(code)
+            print("-------------Dead code elimination complete----------------------")
+            for bb in code:
+                print(bb)
             with open("opt_code_cf.out", "w") as file:
                 sys.stdout = file
                 for bb in code:
@@ -969,12 +971,19 @@ if __name__ == "__main__":
     elif file_name == 'const_prop.icg':
         with open(file_name, "r") as file:
             code = file.readlines()
+            print("-------------Before Optimization------------------")
+            for i in code:
+                print(i.strip())
             code = create_CFG(code)
-            print("Dead code elimination complete")
             # LVN performs common subexpression elimination, constant folding and constant propagation
             code = local_value_numbering(code)
-            print("Constant propagation complete")
+            print("-------------Constant propagation complete---------------------")
+            for bb in code:
+                print(bb)
             code = final_dead_code_elimination(code)
+            print("----------------Dead code elimination complete--------------------")
+            for bb in code:
+                print(bb)
             with open("opt_code_cp.out", "w") as file:
                 sys.stdout = file
                 for bb in code:
