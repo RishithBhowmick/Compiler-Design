@@ -756,6 +756,7 @@ actuals :
 		'(' {in_write = 1;	write_param_count = 0;}
 		expressionList
 		{
+			printf("Near write params\n");
 			write_params(write_param_count);
 			in_write = 0;
 		} ')' 
@@ -1400,7 +1401,7 @@ int yyerror(const char *message) {
 char i_[2]="0";
 int temp_i=0;
 char tmp_i[3];
-char temp[3]="t";
+char temp[4]="t";
 int label[20];
 int lnum=0;
 int ltop=0;
@@ -1473,13 +1474,16 @@ int main(int argc,char* argv[]) {
 				}
 
 	    }
-		printf("---------------------Quadruples-------------------------\n\n");
-		printf("Operator \t Arg1 \t\t Arg2 \t\t Result \n");
+		FILE *tacfptr;
+		char* tac_file_name = (char*)malloc(sizeof(char)*20);
+		strcpy(tac_file_name,"generated_tac.tac");
+		tacfptr = fopen(tac_file_name,"w");
 		for(i=0;i<quadlen;i++)
 		{
-        printf("%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
+        fprintf(tacfptr,"%-8s \t %-8s \t %-8s \t %-6s \n",q[i].op,q[i].arg1,q[i].arg2,q[i].res);
 		}
 		fclose(fptr);
+		fclose(tacfptr);
 	}
 	else {
 		printf("\033[0;37m");
@@ -1558,7 +1562,7 @@ char* get_type(char* op1){
 				yyerror("Warning: Cannot operate int and boolean, aborting\n\n");	
 			}
 
-			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"string")==0) || (strcmp(s1->type,"string")==0 && strcmp(s2->type,"int")==0) ){
+			if ((strcmp(s1->type,"integer")==0 && strcmp(s2->type,"string")==0) || (strcmp(s1->type,"string")==0 && strcmp(s2->type,"integer")==0) ){
 				// printf("Adding 2 integers, typecasting 2st number\n");
 				// printf("Cannot add int and boolean, aborting\n");	
 				yyerror("Warning: Cannot operate int and string, aborting\n\n");	
@@ -1699,7 +1703,7 @@ void codegen()
     sprintf(tmp_i, "%d", temp_i);
     strcat(temp,tmp_i);
     printf("%s = %s %s %s\n",temp,st[top-2],st[top-1],st[top]);
-    q[quadlen].op = (char*)malloc(sizeof(char)*strlen(st[top-1]));
+    q[quadlen].op = (char*)malloc(sizeof(char)*(strlen(st[top-1])+1));
     q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top-2]));
     q[quadlen].arg2 = (char*)malloc(sizeof(char)*strlen(st[top]));
     q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
@@ -1933,7 +1937,9 @@ void if1()
  strcpy(q[quadlen].arg1,st[top-2]);
  char x[10];
  sprintf(x,"%d",lnum);
- char l[]="L";
+ char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
  strcpy(q[quadlen].res,strcat(l,x));
  quadlen++;
 
@@ -1953,7 +1959,10 @@ void if2(){
     strcpy(q[quadlen].op,"goto");
     char jug[10];
     sprintf(jug,"%d",lnum);
-    char l[]="L";
+    
+	char* l = (char*) malloc((strlen(jug)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,jug));
     quadlen++;
 	printf("L%d: \n",x);
@@ -1965,7 +1974,9 @@ void if2(){
 
     char jug1[10];
     sprintf(jug1,"%d",x);
-    char l1[]="L";
+	char* l1 = (char*) malloc((strlen(jug1)+2)*sizeof(char));
+	l1[0] = 'L';
+	l1[1] = '\0';
     strcpy(q[quadlen].res,strcat(l1,jug1));
     quadlen++;
     label[++ltop]=lnum;
@@ -1983,7 +1994,9 @@ void if3()
     strcpy(q[quadlen].op,"Label");
     char x[10];
     sprintf(x,"%d",y);
-    char l[]="L";
+	char* l = (char*) malloc((strlen(x)+2)*sizeof(char));
+	l[0] = 'L';
+	l[1] = '\0';
     strcpy(q[quadlen].res,strcat(l,x));
     quadlen++;
 	++lnum;
@@ -1993,7 +2006,7 @@ void write_params(int n){
 	for(int i=0;i<n;i++){
 		if (st[top][0] != '\''){
 			printf("param %s\n",st[top]);
-			q[quadlen].op = (char*)malloc(sizeof(char)*10);
+			q[quadlen].op = (char*)malloc(sizeof(char)*11);
 			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
 			q[quadlen].arg2 = NULL;
 			q[quadlen].res = NULL;
@@ -2007,7 +2020,7 @@ void write_params(int n){
    			sprintf(tmp_i, "%d", temp_i);
     		strcat(temp,tmp_i);
 			printf("%s = %s \n",temp,st[top]);
-			q[quadlen].op = (char*)malloc(sizeof(char));
+			q[quadlen].op = (char*)malloc(sizeof(char)*11);
 			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
 			q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
 			strcpy(q[quadlen].op, "=");
@@ -2018,7 +2031,7 @@ void write_params(int n){
 			strcpy(st[top],temp);	
 			temp_i++;
 			printf("param %s\n",st[top]);
-			q[quadlen].op = (char*)malloc(sizeof(char)*10);
+			q[quadlen].op = (char*)malloc(sizeof(char)*11);
 			q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
 			q[quadlen].arg2 = NULL;
 			q[quadlen].res = NULL;
@@ -2037,7 +2050,7 @@ void call_function(){
     sprintf(tmp_i, "%d", temp_i);
     strcat(temp,tmp_i);
     printf("%s = call(%s, %d)\n",temp,st[top],write_param_count);
-    q[quadlen].op = (char*)malloc(sizeof(char)*10);
+    q[quadlen].op = (char*)malloc(sizeof(char)*11);
     q[quadlen].arg1 = (char*)malloc(sizeof(char)*strlen(st[top]));
     q[quadlen].arg2 = (char*)malloc(sizeof(char)*10);
     q[quadlen].res = (char*)malloc(sizeof(char)*strlen(temp));
