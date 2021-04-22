@@ -794,7 +794,10 @@ assignment_statements :
 				type_stack[type_stack_top] = strdup($<s.type>4);
 			}
 			//printf("Assign%s",type_stack[type_stack_top]);
-			check_assign(get_type($<s.str>1), type_stack[type_stack_top--]);			
+			if(get_type($<s.str>1) != NULL){
+				//printf("A");
+				check_assign(get_type($<s.str>1), type_stack[type_stack_top--]);			
+			}
 			l=0;
 		}
         ;
@@ -1022,7 +1025,7 @@ term :
 					check_t($<s.type>1, $<s.type>4);
 				}
 				else{
-					char* t2 = get_type($<s.str>3);
+					char* t2 = get_type($<s.str>4);
 					check_t($<s.type>1, t2);
 				}
 			}
@@ -1033,7 +1036,7 @@ term :
 			} 
 			else{
 				char* t1 = get_type($<s.str>1);
-				char* t2 = get_type($<s.str>3);
+				char* t2 = get_type($<s.str>4);
 				check_t(t1, t2);
 			}
 		}			
@@ -1044,7 +1047,7 @@ term :
 					check_t($<s.type>1, $<s.type>4);
 				}
 				else{
-					char* t2 = get_type($<s.str>3);
+					char* t2 = get_type($<s.str>4);
 					check_t($<s.type>1, t2);
 				}
 			}
@@ -1055,7 +1058,7 @@ term :
 			} 
 			else{
 				char* t1 = get_type($<s.str>1);
-				char* t2 = get_type($<s.str>3);
+				char* t2 = get_type($<s.str>4);
 				check_t(t1, t2);
 			}
 		}
@@ -1066,7 +1069,7 @@ term :
 					check_t($<s.type>1, $<s.type>4);
 				}
 				else{
-					char* t2 = get_type($<s.str>3);
+					char* t2 = get_type($<s.str>4);
 					check_t($<s.type>1, t2);
 				}
 			}
@@ -1077,7 +1080,7 @@ term :
 			} 
 			else{
 				char* t1 = get_type($<s.str>1);
-				char* t2 = get_type($<s.str>3);
+				char* t2 = get_type($<s.str>4);
 				check_t(t1, t2);
 			}
 		}
@@ -1088,7 +1091,7 @@ term :
 					check_t($<s.type>1, $<s.type>4);
 				}
 				else{
-					char* t2 = get_type($<s.str>3);
+					char* t2 = get_type($<s.str>4);
 					check_t($<s.type>1, t2);
 				}
 			}
@@ -1099,7 +1102,7 @@ term :
 			} 
 			else{
 				char* t1 = get_type($<s.str>1);
-				char* t2 = get_type($<s.str>3);
+				char* t2 = get_type($<s.str>4);
 				check_t(t1, t2);
 			}
 		}
@@ -1110,7 +1113,7 @@ term :
 					check_t($<s.type>1, $<s.type>4);
 				}
 				else{
-					char* t2 = get_type($<s.str>3);
+					char* t2 = get_type($<s.str>4);
 					check_t($<s.type>1, t2);
 				}
 			}
@@ -1121,7 +1124,7 @@ term :
 			} 
 			else{
 				char* t1 = get_type($<s.str>1);
-				char* t2 = get_type($<s.str>3);
+				char* t2 = get_type($<s.str>4);
 				check_t(t1, t2);
 			}
 		}
